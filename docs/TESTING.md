@@ -63,8 +63,8 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 ## 6. Comandos
 
 ```bash
-xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 16'    # unitário + componente + integração
-xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 16'     # E2E
+xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'    # unitário + componente + integração
+xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'     # E2E
 swiftlint --strict    # estático
 ```
 
