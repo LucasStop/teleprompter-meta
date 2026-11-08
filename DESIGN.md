@@ -4,7 +4,7 @@ Design system do projeto. É a fonte única de identidade visual e de padrões d
 
 Regra de fluxo: nenhuma tela é implementada antes de ter protótipo aprovado pelo Lucas (ver [Fluxo de protótipo e aprovação](#fluxo-de-protótipo-e-aprovação) e [design/telas.md](design/telas.md)). Mudança em token ou componente atualiza este arquivo no mesmo PR.
 
-Status do design system: rascunho
+Status do design system: aprovado em 2026-11-08
 
 Duas superfícies: o app no iPhone (SwiftUI) e a lente do Meta Ray-Ban Display (600x600 px, uma view enviada pelo módulo `Glasses`). Números marcados "a validar" valem como proposta até o teste no óculos real (gate G3).
 
@@ -167,4 +167,4 @@ Nenhuma tela é desenvolvida sem protótipo aprovado. O inventário e o status d
 - Sem referências ainda; adicionar links ou prints que representem o alvo.
 
 ## Histórico
-- 2026-11-08: criação do design system (rascunho).
+- 2026-11-08: criação e aprovação do design system.
