@@ -1,0 +1,35 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Lockfiles: versionar nenhum (regra global)
+yarn.lock
+package-lock.json
+
+# Dependências e build
+node_modules/
+dist/
+build/
+.next/
+coverage/
+*.log
+
+# Testes
+playwright-report/
+test-results/
+
+# Sistema e editor
+.DS_Store
+.idea/
+.vscode/
+
+# Override pessoal da CLI de IA
+CLAUDE.local.md
+
+# Swift / Xcode
+.build/
+build.noindex/
+DerivedData/
+*.xcuserstate
+xcuserdata/

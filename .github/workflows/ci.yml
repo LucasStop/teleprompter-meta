@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev, 'release/**']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: SwiftLint · Testes
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ferramentas
+        run: brew install xcodegen swiftlint
+
+      - name: Gerar projeto
+        run: xcodegen generate
+        continue-on-error: true # TODO: tirar quando existir project.yml (fase 1)
+
+      - name: SwiftLint
+        run: swiftlint --strict
+        continue-on-error: true # TODO: tirar quando o repo passar limpo
+
+      - name: Testes
+        # Ajustar scheme e destino ao projeto (simulador iOS).
+        run: xcodebuild test -scheme "$SCHEME" -destination 'platform=iOS Simulator,name=iPhone 16'
+        continue-on-error: true # TODO: tirar quando existir o scheme Teleprompter (fase 1)
+        env:
+          SCHEME: Teleprompter
