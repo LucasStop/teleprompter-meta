@@ -2,7 +2,7 @@
 
 Decisão de quais testes valem para cada parte do projeto. Catálogo de tipos e matriz default: `~/.claude/TESTES.md`. Partes definidas em [ARCHITECTURE.md](ARCHITECTURE.md). Estratégia aprovada pelo Lucas antes da implementação.
 
-Status: aprovada em 2026-11-08
+Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 ## 1. Formato da suíte
 - Formato: Troféu
@@ -15,6 +15,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | Parte | Risco principal | Tipos aplicados | Ferramenta | Roda em | Fora de escopo e motivo |
 |---|---|---|---|---|---|
 | Audio e STT | Transcrição ruim a 8 kHz, perda de áudio | integração, desempenho | XCTest com as 30 perguntas gravadas (pt-BR) e fake de áudio; WER medido | local, PR | STT real nunca roda no PR; só no protótipo P1 |
+| Conversa (chat e RAG fechado) | Inventar resposta fora do material, perder fonte, misturar entradas | unitário, integração, aceitação | Swift Testing com fakes de Retriever e AnswerGenerator; caso "sem trecho acima do limiar" nunca chama o LLM | local, PR | Qualidade semântica manual nos protótipos |
 | QuestionDetector | Corta a pergunta cedo ou dispara duas vezes | estático, unitário, aceitação | Swift Testing / XCTest (transcrições parciais sintéticas) | local, PR | Mutação só aqui (núcleo crítico) |
 | Retrieval | Resposta errada ou nota não encontrada | unitário, integração, aceitação | XCTest com corpus fixo de Q&A, README e código de exemplo | PR | Qualidade semântica avaliada manualmente nos protótipos |
 | LLM | Latência alta, contexto vazado, formato quebrado | integração com fake, contrato, desempenho | XCTest com fake de streaming; medição de primeiro token no protótipo P3 | PR | Chamada real ao provedor nunca roda no PR |

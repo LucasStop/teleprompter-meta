@@ -1,6 +1,6 @@
 # PRD — Teleprompter Meta
 
-App iOS pessoal que ouve as perguntas da banca, busca no material do meu projeto e mostra uma resposta curta na lente do Meta Ray-Ban Display, como teleprompter com contexto.
+App iOS pessoal em formato de chat: pergunto por voz ou texto, ele busca só no material que eu inseri (RAG) e responde no chat e, em resumo, na lente do Meta Ray-Ban Display, como teleprompter com contexto.
 
 Plano de origem: documento "Teleprompter com IA para Ray-Ban Display" (claude.ai, abas Plano e ADRs) e handoff de 2026-11-08.
 
@@ -8,7 +8,7 @@ Plano de origem: documento "Teleprompter com IA para Ray-Ban Display" (claude.ai
 Em apresentações, palestras e na defesa do projeto diante da banca, as perguntas chegam sem aviso e a resposta precisa vir rápida e correta. Olhar anotações ou o celular quebra o contato com a banca. Teleprompter comum só rola um roteiro fixo e não reage à pergunta feita.
 
 ## Solution
-App iOS que captura o áudio pelo microfone dos óculos (Bluetooth HFP), transcreve em streaming, detecta o fim da pergunta, busca nas minhas notas de Q&A, no README e documentos e no código do repositório, e exibe na lente uma resposta curta no formato escolhido (bullets, palavras-chave ou texto completo). Se a pergunta casar com uma nota de Q&A, a resposta sai direto; senão um LLM rápido gera a resposta com streaming. Gesto no Neural Band pede de novo ou pula.
+App iOS com tela de chat (mensagens, campo de texto e microfone). A pergunta entra por texto, por toque no microfone ou pela escuta contínua da banca; o app responde apenas com base no material importado e, se nada relevante for achado, diz que não achou em vez de inventar. No modo de escuta contínua, ele captura o áudio pelo microfone dos óculos (Bluetooth HFP), transcreve em streaming, detecta o fim da pergunta, busca nas minhas notas de Q&A, no README e documentos e no código do repositório, e exibe na lente uma resposta curta no formato escolhido (bullets, palavras-chave ou texto completo). Se a pergunta casar com uma nota de Q&A, a resposta sai direto; senão um LLM rápido gera a resposta com streaming. Gesto no Neural Band pede de novo ou pula.
 
 ## User Stories
 Cada história tem critério de aceite, que vira teste (ver [TESTING.md](TESTING.md), seção Rastreabilidade).
@@ -27,12 +27,17 @@ Telas em [../design/telas.md](../design/telas.md). As metas numéricas são prop
 | US-09 | Como apresentador, quero pedir de novo ou pular a resposta por gesto, para controlar sem tocar no iPhone | Dado o Neural Band, quando faço o gesto mapeado, então o app repete ou descarta a resposta (fase 4) |
 | US-10 | Como apresentador, quero sessão estável por 60 min, para aguentar a banca inteira | Dado uma sessão contínua, quando 60 min passam, então não há queda de conexão nem travamento não recuperado (fase 5) |
 | US-11 | Como apresentador, quero importar e indexar meu material, para a busca refletir o projeto atual | Dado README, documentos, notas de Q&A e repositório, quando importo, então a busca passa a considerá-los |
+| US-12 | Como apresentador, quero conversar por texto ou por toque no microfone, para usar o app também fora da banca | Dado o chat aberto, quando envio texto ou falo após tocar no microfone, então a pergunta aparece como mensagem e recebe resposta pelo mesmo pipeline |
+| US-13 | Como apresentador, quero que o app responda só com o meu material, para não ouvir invenção na banca | Dado uma pergunta sem trecho acima do limiar de similaridade, quando a busca roda, então o app responde "Não encontrei isso no seu material" sem chamar o LLM livre; toda resposta mostra as fontes usadas |
+| US-14 | Como apresentador, quero conversas salvas no aparelho, para revisar e ensaiar depois | Dado conversas anteriores, quando abro "Conversas", então vejo a lista por mais recente e posso abrir ou apagar cada uma |
 
 ## Implementation Decisions
 - Plataforma e stack: Swift nativo, SwiftUI, iOS 17.2+, Xcode 26.4+, Meta Wearables Device Access Toolkit (módulos MWDATCore, MWDATCamera, MWDATDisplay via Swift Package Manager), testado em iPhone físico. ADR-0001.
 - Partes do sistema: ver [ARCHITECTURE.md](ARCHITECTURE.md).
 - Cada etapa do pipeline é um protocolo Swift com implementação para iPhone/simulada e outra para os óculos; o DAT SDK fica isolado no módulo Glasses.
-- Disparo automático ao detectar a pergunta, mais gesto para pedir de novo ou pular.
+- Chat como interface principal: três entradas (texto, toque no microfone, escuta contínua com detecção de fim de pergunta). A lente sempre espelha a última resposta.
+- RAG fechado: o LLM só recebe trechos recuperados do material inserido; sem trecho acima do limiar, não há resposta livre (ADR-0009 a criar).
+- Disparo automático na escuta contínua, mais gesto para pedir de novo ou pular.
 - Prioridade técnica: latência mínima.
 - Fases 0 a 7 com gates G0 a G6; a compra do Display fica no gate G1, depois dos protótipos.
 
@@ -49,6 +54,7 @@ Telas em [../design/telas.md](../design/telas.md). As metas numéricas são prop
 ## Out of Scope
 - Publicação na App Store, outros usuários, Android, Web App e servidor próprio.
 - Dado pessoal de terceiros.
+- Resposta com conhecimento geral fora do material (decisão de 2026-11-08: RAG fechado).
 
 ## Further Notes
 - DAT SDK em developer preview; acesso ao display aberto em 2026-05-14. O Ray-Ban Display não é vendido no Brasil e o Developer Center completo é só para países suportados: validar antes de comprar.

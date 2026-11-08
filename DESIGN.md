@@ -113,6 +113,8 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Navegação | abas inferiores (Sessão, Material, Ensaio, Ajustes) | md | ativo | idem | E2E |
 | Alerta / banner | info, warning, danger | md | padrão, dispensável | idem | visual |
 | Selo de estado | ouvindo, transcrevendo, pensando, respondendo, erro, desconectado | sm | todos | idem | componente + visual |
+| Mensagem de chat | pergunta, resposta (com fontes), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
+| Compositor | texto, microfone, escuta contínua | md | vazio, digitando, ouvindo, desabilitado | idem | componente + a11y |
 | Transcrição ao vivo | parcial, final | md | vazio, ativo, erro | idem | componente |
 | Cartão de resposta | bullets, palavras-chave, texto completo | md | carregando (streaming), pronto, erro | idem | visual |
 | `LensView` (lente 600x600) | bullets, palavras-chave, texto completo, status | 600x600 | ouvindo, pensando, resposta, erro, vazio | `Teleprompter/Lens/` (a criar) | visual + manual no óculos |
@@ -125,7 +127,7 @@ Por componente, registrar em `design/components.md` a anatomia e a regra de uso;
 - Carregamento: resposta chega em streaming (texto aparece aos poucos, sem spinner); spinner só para importação a partir de 300 ms.
 - Estado vazio: explica a área e oferece a próxima ação (ex.: "Importar material").
 - Estado de erro: diz o que houve, o que fazer e permite tentar de novo; na lente, uma linha curta de status.
-- Navegação: barra de abas com 4 destinos, profundidade máxima 2; ação principal da sessão (iniciar/parar escuta) fixa na parte inferior.
+- Navegação: barra de abas com 4 destinos, profundidade máxima 2; compositor do chat (campo, enviar, microfone, escuta contínua) fixo na parte inferior.
 - Listas: ordenação por mais recente, busca por texto nas notas, sem seleção em massa no MVP.
 - Responsividade: só retrato no iPhone; Dynamic Type até a faixa de acessibilidade sem cortar texto (componentes crescem).
 - Lente: uma pergunta/resposta por vez; nova resposta substitui a anterior sem transição; sem rolagem.
