@@ -2,7 +2,7 @@
 
 Dados locais do app. Ligado a [ARCHITECTURE.md](ARCHITECTURE.md) (parte Persistência) e a [TESTING.md](TESTING.md).
 
-Status: rascunho
+Status: aprovada em 2026-11-08
 
 ## 1. Armazenamento
 - Banco: sem servidor. SQLite com FTS5 e tabela de embeddings, gerado por `Tools/Indexer` (ADR-0006, proposta); configurações em arquivo local · Cache/fila: N/A · Arquivos: material importado e índice.

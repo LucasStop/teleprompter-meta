@@ -2,7 +2,7 @@
 
 App nativo sem backend próprio. Este arquivo documenta os contratos internos (protocolos Swift entre as partes) e o contrato consumido do provedor de LLM. Mudança de contrato atualiza este arquivo e os testes no mesmo PR (ver [TESTING.md](TESTING.md)).
 
-Status: rascunho
+Status: aprovada em 2026-11-08
 
 ## 1. Visão
 - Consumidores: o próprio app. Nenhuma API pública.
