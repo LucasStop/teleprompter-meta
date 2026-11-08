@@ -39,7 +39,7 @@ Telas em [../design/telas.md](../design/telas.md). As metas numéricas são prop
 ## Design Decisions
 - Design system: [../DESIGN.md](../DESIGN.md). Telas e aprovação: [../design/telas.md](../design/telas.md).
 - Lente do Display: 600x600 px; formato da resposta configurável.
-- UI do iPhone em pt-BR. Tema claro/escuro: <PREENCHER: decidir no design system>.
+- UI do iPhone em pt-BR. Tema do app claro/escuro automático (segue o sistema); a lente é sempre escura. Detalhes no DESIGN.md.
 
 ## Testing Decisions
 - Estratégia e matriz por parte: [TESTING.md](TESTING.md).
