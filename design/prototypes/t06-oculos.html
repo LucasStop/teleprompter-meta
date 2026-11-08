@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T06 Óculos</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="phone.css">
+</head>
+<body>
+<script src="proto.js"></script>
+<script>
+proto({ title: "T06 Óculos", tab: "Ajustes", titulo: "Óculos", back: "Ajustes", inicial: "conectado",
+ estados: {
+  desconectado: ["Desconectado", `<div class="badge err"><i></i>Óculos desconectados</div><div class="empty"><h3>Nenhum óculos pareado</h3><span>Pareie pelo app Meta AI e volte aqui. Sem óculos, a resposta aparece na lente simulada do iPhone.</span></div>`],
+  pareando: ["Pareando", `<div class="badge act"><i></i>Procurando óculos</div><div class="card" style="padding:var(--s4);display:grid;gap:var(--s2)"><b>Autorize no app Meta AI</b><div class="bar"><i style="width:30%"></i></div><span class="cap">Mantenha os óculos próximos e ligados.</span></div>`],
+  conectado: ["Conectado", `<div class="badge ok"><i></i>Conectado</div><div class="card"><div class="item"><b>Ray-Ban Display</b><span class="v">Pareado</span></div><div class="item"><b>Microfone</b><span class="v">HFP 8 kHz</span></div><div class="item"><b>Display</b><span class="v">600x600</span></div><div class="item"><b>Neural Band</b><span class="v">Conectado</span></div></div>`],
+  erro: ["Erro", `<div class="banner"><b>Conexão perdida.</b> A resposta aparece só no iPhone. Aproxime os óculos e tente de novo.</div>`]
+ },
+ acao: { desconectado: `<div class="btn">Parear óculos</div>`, pareando: `<div class="btn sec">Cancelar</div>`, conectado: `<div class="btn sec">Enviar resposta de teste à lente</div>`, erro: `<div class="btn">Reconectar</div>` } });
+</script>
+</body>
+</html>

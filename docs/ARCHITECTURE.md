@@ -3,7 +3,7 @@
 Visão das partes do sistema e de como se conectam. Cada parte aqui ganha uma linha em [TESTING.md](TESTING.md). Decisões difíceis de reverter viram ADR em [adr/](adr/).
 Parte com UI tem suas telas em [../design/telas.md](../design/telas.md).
 
-Status: aprovada em 2026-11-08
+Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 ## 1. Contexto
 - O que o sistema faz: ouve a pergunta, recupera contexto do meu material e mostra resposta curta na lente (PRD US-01 a US-11).
@@ -14,7 +14,8 @@ Status: aprovada em 2026-11-08
 
 | Parte | Responsabilidade | Tecnologia | Dono / pasta | Depende de | Dado sensível? |
 |---|---|---|---|---|---|
-| Interface iPhone | Configurações, importação, ensaio, lente simulada | SwiftUI | `App/UI` | Domínio | Não |
+| Interface iPhone | Chat (mensagens, texto, microfone), conversas, configurações, importação, ensaio, lente simulada | SwiftUI | `App/UI` | Domínio | Não |
+| Conversa | Orquestra entradas (texto, microfone, escuta contínua), mensagens e fontes | Swift puro (ViewModel) | `App/Domain` | Retrieval, STT | Não |
 | Audio | Captura do microfone (iPhone ou HFP dos óculos) | AVAudioEngine | `App/Audio` | - | Sim (voz) |
 | STT | Transcrição em streaming | SpeechAnalyzer ou alternativa (ADR-003) | `App/STT` | Audio | Sim |
 | QuestionDetector | Detecta fim da pergunta | Swift puro | `App/Domain` | STT | Não |
@@ -23,7 +24,7 @@ Status: aprovada em 2026-11-08
 | ResponseFormatter | Ajusta ao formato e ao limite da lente | Swift puro | `App/Domain` | LLM, Retrieval | Não |
 | Lens (protocolo) | Saída da resposta | `SimulatedLens` e `GlassesLens` | `App/Lens` | Formatter | Não |
 | Glasses | Isola o DAT SDK: registro, microfone, display, gestos | MWDATCore, MWDATDisplay | `App/Glasses` | DAT SDK | Não |
-| Persistência | Configurações, índice, notas de Q&A | Arquivos/SwiftData | `App/Storage` | - | Não |
+| Persistência | Configurações, índice, notas de Q&A, conversas | Arquivos/SwiftData | `App/Storage` | - | Sim (perguntas e respostas salvas) |
 | Segredos | Chave do LLM | Keychain | `App/Storage` | - | Sim |
 | Infra e CI | Build e testes | XcodeGen, GitHub Actions macOS, lefthook | `.github`, `project.yml` | - | - |
 
@@ -33,10 +34,13 @@ Sem backend próprio, sem jobs/filas, sem autenticação de usuário.
 
 ```mermaid
 flowchart LR
-  MIC[Microfone HFP 8 kHz] --> AUD[Audio] --> STT[STT streaming] --> DET[QuestionDetector]
-  DET --> RET[Retrieval local]
+  TXT[Campo de texto] --> CHAT[Conversa]
+  MIC[Microfone HFP 8 kHz] --> AUD[Audio] --> STT[STT streaming] --> DET[QuestionDetector] --> CHAT
+  CHAT --> RET
+  RET[Retrieval local]
   RET -->|casa com nota de Q&A| FMT[ResponseFormatter]
-  RET -->|sem nota| LLM[LLM streaming] --> FMT
+  RET -->|sem nota, com trechos| LLM[LLM streaming] --> FMT
+  RET -->|nada acima do limiar| NF[Não encontrei no material] --> FMT
   FMT --> LENS{Lens}
   LENS --> SIM[SimulatedLens iPhone]
   LENS --> GL[GlassesLens / DAT SDK]
@@ -44,6 +48,7 @@ flowchart LR
 ```
 
 ## 4. Fluxos principais
+- Chat (US-12 a US-14): texto ou microfone entra como mensagem, segue o mesmo caminho da busca; sem trecho acima do limiar, a resposta é "não encontrei no seu material" e o LLM não é chamado.
 - Pergunta ao vivo (US-01 a US-05): áudio, transcrição parcial, fim detectado, busca, resposta direta ou via LLM, formatação, lente.
 - Gesto (US-09): Neural Band, Glasses, pedir de novo ou pular a resposta atual.
 - Importação (US-11): selecionar material, indexar, disponibilizar à busca.
@@ -87,3 +92,4 @@ Fonte original: aba ADRs do documento do plano. Propostas se decidem nos gates G
 | [0006](adr/0006-indice-sqlite-com-embeddings.md) | Índice SQLite (FTS5) com embeddings no aparelho | proposta (G1) |
 | [0007](adr/0007-protocolos-com-implementacoes-simuladas.md) | Protocolos com implementações simuladas | proposta (G2) |
 | [0008](adr/0008-dat-sdk-isolado-e-versoes-fixadas.md) | DAT SDK isolado e versões fixadas | proposta (G2) |
+| [0009](adr/0009-rag-fechado-no-chat.md) | RAG fechado no chat: só material inserido, sem invenção | proposta (G1) |

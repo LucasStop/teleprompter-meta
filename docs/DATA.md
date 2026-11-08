@@ -2,7 +2,7 @@
 
 Dados locais do app. Ligado a [ARCHITECTURE.md](ARCHITECTURE.md) (parte Persistência) e a [TESTING.md](TESTING.md).
 
-Status: aprovada em 2026-11-08
+Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 ## 1. Armazenamento
 - Banco: sem servidor. SQLite com FTS5 e tabela de embeddings, gerado por `Tools/Indexer` (ADR-0006, proposta); configurações em arquivo local · Cache/fila: N/A · Arquivos: material importado e índice.
@@ -17,6 +17,8 @@ Status: aprovada em 2026-11-08
 | Document | README e documentos importados | id | tem Chunks | Não |
 | CodeFile | Arquivo do repositório indexado | caminho + commit | tem Chunks | Não |
 | Chunk | Trecho indexado para busca | id | de Document ou CodeFile | Não |
+| Conversation | Conversa do chat | id | tem Messages | Sim (texto das perguntas e respostas) |
+| Message | Pergunta ou resposta, com fontes e latência | id | pertence a uma Conversation; cita Chunks | Sim |
 | Session | Registro opcional de ensaio (latência por etapa, sem a fala) | id | - | Não |
 
 ## 3. Regras de integridade
@@ -29,7 +31,7 @@ Status: aprovada em 2026-11-08
 
 ## 5. Dados pessoais e LGPD
 - Dados pessoais: nenhum de terceiros. A voz e o texto da pergunta podem sair para STT/LLM externo (registrar no ADR-005). Nenhuma transcrição em log.
-- Retenção: Session guarda só métricas e é apagável.
+- Retenção: Session guarda só métricas e é apagável. Conversation e Message ficam só no aparelho, apagáveis por conversa e em massa; nunca em log nem em backup externo. Voz não é gravada, só o texto.
 
 ## 6. Backup e recuperação
 - Fonte de verdade das notas de Q&A: arquivos versionados no repositório de material. RPO/RTO: N/A. Restauração: reimportar.

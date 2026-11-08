@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T07 Conversas</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="phone.css">
+</head>
+<body>
+<script src="proto.js"></script>
+<script>
+const c = (t, d, n) => `<div class="item"><div class="t"><b>${t}</b><span>${d}</span></div><span class="v">${n} msgs</span></div>`;
+proto({ title: "T07 Conversas", tab: "Chat", titulo: "Conversas", back: "Chat", inicial: "padrao",
+ estados: {
+  vazio: ["Vazio", `<div class="empty"><h3>Nenhuma conversa salva</h3><span>As conversas do chat aparecem aqui, só neste aparelho.</span></div>`],
+  padrao: ["Padrão", `<div class="field" style="color:var(--muted)">Buscar nas conversas</div><div class="card">${c("Por que Swift nativo e não Flutter?", "Hoje, 14:20", 8)}${c("Ensaio da banca", "Ontem", 34)}${c("Qual o problema que o app resolve?", "5 nov", 4)}</div><span class="cap">Deslize para apagar uma conversa. Nada sai do aparelho.</span>`]
+ },
+ acao: { padrao: `<div class="btn dng">Apagar todas as conversas</div>` } });
+</script>
+</body>
+</html>

@@ -185,3 +185,33 @@ depende: us-03, telas
 Como apresentador, quero importar e indexar meu material, para a busca refletir o projeto atual.
 
 Aceite: dado README, documentos, notas de Q&A e repositório, quando importo, então a busca passa a considerá-los.
+
+## US-12: Conversar por texto ou microfone
+id: us-12
+labels: feature
+pai: mvp
+depende: us-04, telas
+
+Como apresentador, quero conversar por texto ou por toque no microfone, para usar o app também fora da banca.
+
+Aceite: dado o chat aberto, quando envio texto ou falo após tocar no microfone, então a pergunta aparece como mensagem e recebe resposta pelo mesmo pipeline.
+
+## US-13: Responder só com o material
+id: us-13
+labels: feature
+pai: mvp
+depende: us-03
+
+Como apresentador, quero que o app responda só com o meu material, para não ouvir invenção na banca.
+
+Aceite: dado uma pergunta sem trecho acima do limiar de similaridade, quando a busca roda, então o app responde "Não encontrei isso no seu material" sem chamar o LLM livre; toda resposta mostra as fontes usadas.
+
+## US-14: Conversas salvas no aparelho
+id: us-14
+labels: feature
+pai: mvp
+depende: us-12
+
+Como apresentador, quero conversas salvas no aparelho, para revisar e ensaiar depois.
+
+Aceite: dado conversas anteriores, quando abro "Conversas", então vejo a lista por mais recente e posso abrir ou apagar cada uma.

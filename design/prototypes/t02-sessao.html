@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T02 Chat da sessão</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  main { display: grid; place-items: center; padding: var(--s5) var(--s4); }
+  .phone { width: 390px; max-width: 100%; height: 780px; background: var(--background); border: 1px solid var(--border); border-radius: 40px; display: flex; flex-direction: column; overflow: hidden; }
+  .top { padding: var(--s6) var(--s4) var(--s2); display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+  h2 { font-size: 28px; line-height: 34px; margin: 0; font-weight: 700; }
+  .badge { display: inline-flex; align-items: center; gap: var(--s2); font-size: 15px; line-height: 20px; padding: var(--s1) var(--s3); border-radius: 999px; border: 1px solid var(--border); background: var(--surface); width: fit-content; }
+  .badge i { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); display: inline-block; }
+  .badge.ok i { background: var(--success); } .badge.act i { background: var(--primary); } .badge.err i { background: var(--danger); }
+  .ghost { min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--foreground); font: 15px var(--font); display: grid; place-items: center; }
+  .chat { flex: 1; overflow: auto; padding: var(--s2) var(--s4) var(--s4); display: grid; gap: var(--s3); align-content: start; }
+  .msg { max-width: 88%; padding: var(--s3) var(--s4); border-radius: var(--r-lg); display: grid; gap: var(--s2); }
+  .msg.q { justify-self: end; background: var(--primary); color: var(--primary-foreground); border-bottom-right-radius: var(--r-sm); }
+  .msg.a { justify-self: start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: var(--r-sm); }
+  .msg ul { margin: 0; padding-left: var(--s4); }
+  .cap { font-size: 12px; line-height: 16px; color: var(--muted); }
+  .src { display: flex; flex-wrap: wrap; gap: var(--s1); }
+  .src span { font: 12px/16px var(--mono); border: 1px solid var(--border); border-radius: 999px; padding: 2px var(--s2); color: var(--muted); }
+  .partial { opacity: .7; }
+  .banner { border-radius: var(--r-md); padding: var(--s3) var(--s4); border: 1px solid var(--danger); background: var(--surface); font-size: 15px; line-height: 20px; margin: 0 var(--s4); }
+  .banner b { color: var(--danger); }
+  .empty { text-align: center; color: var(--muted); padding: var(--s6) var(--s4); display: grid; gap: var(--s3); }
+  .empty h3 { margin: 0; color: var(--foreground); font-size: 20px; line-height: 25px; }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; }
+  .chips span { border: 1px solid var(--border); border-radius: 999px; padding: var(--s2) var(--s3); background: var(--surface); color: var(--foreground); font-size: 15px; line-height: 20px; }
+  .comp { border-top: 1px solid var(--border); padding: var(--s2) var(--s4) var(--s3); display: grid; gap: var(--s2); background: var(--surface); }
+  .row { display: flex; align-items: flex-end; gap: var(--s2); }
+  .field { flex: 1; min-height: 44px; border: 1px solid var(--border); border-radius: 22px; padding: 10px var(--s4); background: var(--background); color: var(--foreground); font: 17px/24px var(--font); }
+  .field.ph { color: var(--muted); }
+  .ib { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--background); color: var(--foreground); font: 600 17px var(--font); display: grid; place-items: center; flex: none; }
+  .ib.pri { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+  .ib.rec { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .live { display: flex; align-items: center; justify-content: space-between; font-size: 15px; line-height: 20px; }
+  .tog { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; }
+  .tog b { width: 40px; height: 24px; border-radius: 12px; background: var(--border); position: relative; display: inline-block; }
+  .tog b::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--foreground); }
+  .tog.on b { background: var(--primary); } .tog.on b::after { left: 18px; background: var(--primary-foreground); }
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+  .tabs div { min-height: 56px; display: grid; place-items: center; font-size: 12px; line-height: 16px; color: var(--muted); }
+  .tabs div[aria-current] { color: var(--primary); font-weight: 600; }
+  .meta { font: 12px/16px var(--mono); color: var(--muted); margin-top: var(--s3); text-align: center; }
+</style>
+</head>
+<body>
+<div class="proto-bar" role="toolbar" aria-label="Controles do protótipo">
+  <h1>T02 Chat da sessão</h1>
+  <div class="grp" id="estado"><span class="lbl">Estado</span></div>
+  <div class="grp" id="tema"><span class="lbl">Tema</span></div>
+</div>
+<main>
+  <div>
+    <div class="phone" id="phone" aria-label="Tela Chat no iPhone"></div>
+    <p class="meta" id="meta"></p>
+  </div>
+</main>
+<script>
+const estados = { vazio: "Vazio", digitando: "Digitando", ouvindo: "Escuta contínua", pensando: "Pensando", conversa: "Conversa", semmaterial: "Sem no material", erro: "Sem conexão", desconectado: "Óculos desconectados" };
+const temas = { auto: "Sistema", light: "Claro", dark: "Escuro" };
+let est = "conversa", tema = "dark";
+const $ = (id) => document.getElementById(id);
+function btns(box, obj, set) {
+  Object.entries(obj).forEach(([k, v]) => { const b = document.createElement("button"); b.textContent = v; b.dataset.k = k; b.onclick = () => { set(k); render(); }; box.appendChild(b); });
+}
+const Q1 = "Por que Swift nativo e não Flutter?";
+const A1 = `<ul><li>DAT SDK só tem módulos Swift</li><li>Menor latência de áudio</li><li>Acesso direto ao SpeechAnalyzer</li></ul><div class="src"><span>qa/stack.md</span><span>docs/ADR-0001.md</span></div><span class="cap">nota de Q&amp;A · 0,6 s</span>`;
+const q = (t, cls = "") => `<div class="msg q ${cls}">${t}</div>`;
+const a = (h) => `<div class="msg a">${h}</div>`;
+function badge(e) {
+  const m = { vazio: ["Pronto", ""], digitando: ["Pronto", ""], ouvindo: ["Ouvindo a banca", "act"], pensando: ["Buscando no material", "act"], conversa: ["Resposta enviada à lente", "ok"], semmaterial: ["Sem resposta no material", ""], erro: ["Sem conexão", "err"], desconectado: ["Óculos desconectados", "err"] }[e];
+  return `<span class="badge ${m[1]}"><i></i>${m[0]}</span>`;
+}
+function render() {
+  document.documentElement.dataset.theme = tema === "auto" ? "" : tema;
+  document.querySelectorAll("#estado button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === est));
+  document.querySelectorAll("#tema button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === tema));
+  let msgs = "";
+  if (est === "vazio" || est === "digitando") {
+    msgs = `<div class="empty"><h3>Pergunte sobre o seu projeto</h3><span>Respondo só com o material que você importou. Digite, toque no microfone ou ligue a escuta contínua.</span><div class="chips"><span>Qual o problema que o app resolve?</span><span>Como funciona a busca?</span></div></div>`;
+  } else if (est === "ouvindo") {
+    msgs = a(`<span class="cap">Escuta contínua ligada. Detecto o fim da pergunta e respondo sozinho.</span>`) + q(`Por que Swift nativo e não <span class="partial">Flutter...</span>`, "partial") + `<span class="cap" style="justify-self:end">Pergunta parcial</span>`;
+  } else if (est === "pensando") {
+    msgs = q(Q1) + a(`<span class="cap">Buscando no material...</span><span>DAT SDK só tem módulos</span>`);
+  } else if (est === "semmaterial") {
+    msgs = q("Qual o orçamento do projeto?") + a(`<strong>Não encontrei isso no seu material.</strong><span>Importe uma nota ou documento sobre o assunto, ou reformule a pergunta.</span><span class="cap">Nada acima do limiar de similaridade</span>`);
+  } else {
+    msgs = q("Qual o problema que o app resolve?") + a(`<ul><li>Resposta rápida na banca</li><li>Sem olhar anotações</li></ul><div class="src"><span>README.md</span></div><span class="cap">trecho do README · 1,4 s</span>`) + q(Q1) + a(A1);
+  }
+  let ban = "";
+  if (est === "erro") ban = `<div class="banner"><b>Sem conexão.</b> Respondendo só com as notas de Q&amp;A. Verifique a rede e tente de novo.</div>`;
+  if (est === "desconectado") ban = `<div class="banner"><b>Óculos desconectados.</b> A resposta aparece só no iPhone. Reconecte pelo app Meta AI.</div>`;
+  const ouv = est === "ouvindo";
+  const field = est === "digitando" ? `<div class="field">Como funciona a busca no mat</div>` : `<div class="field ph">${ouv ? "Ouvindo..." : "Pergunte sobre o seu material"}</div>`;
+  const act = est === "digitando" ? `<div class="ib pri" aria-label="Enviar">↑</div>` : `<div class="ib ${ouv ? "rec" : ""}" aria-label="${ouv ? "Parar microfone" : "Falar"}">${ouv ? "■" : "●"}</div>`;
+  $("phone").innerHTML = `<div class="top"><div><h2>Chat</h2></div><div class="ghost">Conversas</div></div><div style="padding:0 var(--s4) var(--s2)">${badge(est)}</div>${ban}<div class="chat">${msgs}</div><div class="comp"><div class="live"><span class="tog ${ouv ? "on" : ""}"><b></b>Escuta contínua</span><span class="cap">Só material importado</span></div><div class="row">${field}${act}</div></div><nav class="tabs" aria-label="Abas"><div aria-current="page">Chat</div><div>Material</div><div>Ensaio</div><div>Ajustes</div></nav>`;
+  $("meta").textContent = `estado: ${est} · tema: ${tema} · iPhone retrato`;
+}
+btns($("estado"), estados, (k) => (est = k));
+btns($("tema"), temas, (k) => (tema = k));
+render();
+</script>
+</body>
+</html>

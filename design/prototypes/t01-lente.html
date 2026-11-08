@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T01 Lente simulada</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  main { display: grid; place-items: center; padding: var(--s6) var(--s4); gap: var(--s4); }
+  /* Lente: 600x600 px, fundo preto, margem segura 32 px (a validar no óculos) */
+  .lens { width: 600px; height: 600px; max-width: 100%; aspect-ratio: 1; background: #000; color: #F5F3EE; padding: 32px; border-radius: var(--r-lg); border: 1px solid #2C2C30; display: flex; flex-direction: column; justify-content: center; gap: 16px; overflow: hidden; }
+  .lens-status { font-size: 24px; line-height: 30px; font-weight: 500; color: #A3A09A; display: flex; align-items: center; gap: 12px; }
+  .lens-status .dot { width: 14px; height: 14px; border-radius: 50%; background: #F5A524; }
+  .lens-status.err { color: #F85149; } .lens-status.err .dot { background: #F85149; }
+  .lens-title { font-size: 40px; line-height: 48px; font-weight: 600; margin: 0; }
+  .lens-body { font-size: 32px; line-height: 42px; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .lens-body li::before { content: "\2022\00a0"; color: #F5A524; }
+  .kw { display: flex; flex-wrap: wrap; gap: 12px; }
+  .kw span { font-size: 32px; line-height: 42px; font-weight: 600; color: #F5A524; }
+  .lens-q { font-size: 24px; line-height: 30px; color: #A3A09A; margin: 0; }
+  .note { max-width: 600px; color: var(--muted); font-size: 15px; line-height: 20px; }
+  .meta { font: 12px/16px var(--mono); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="proto-bar" role="toolbar" aria-label="Controles do protótipo">
+  <h1>T01 Lente simulada</h1>
+  <div class="grp" id="estado"><span class="lbl">Estado</span></div>
+  <div class="grp" id="formato"><span class="lbl">Formato</span></div>
+</div>
+<main>
+  <div class="lens" id="lens" role="img" aria-label="Lente simulada 600 por 600"></div>
+  <p class="meta" id="meta"></p>
+  <p class="note">Fundo preto puro (em tela aditiva tende a ficar transparente, a validar no óculos). Só foreground, muted e primary. Uma resposta por vez, sem rolagem e sem animação com texto na tela. Máximo de 5 linhas e 28 caracteres por linha (a validar).</p>
+</main>
+<script>
+const R = {
+  q: "Por que Swift nativo e não Flutter?",
+  bullets: ["DAT SDK só tem módulos Swift", "Menor latência de áudio", "Acesso direto ao SpeechAnalyzer"],
+  kw: ["DAT SDK", "Swift", "Baixa latência"],
+  full: "O SDK da Meta só oferece módulos Swift, e o app precisa de microfone e streaming com a menor latência possível."
+};
+const estados = { vazio: "Vazio", ouvindo: "Ouvindo", pensando: "Pensando", resposta: "Resposta", erro: "Erro" };
+const formatos = { bullets: "Bullets", kw: "Palavras-chave", full: "Texto completo" };
+let est = "resposta", fmt = "bullets";
+const $ = (id) => document.getElementById(id);
+function btns(box, obj, cur, set) {
+  Object.entries(obj).forEach(([k, v]) => {
+    const b = document.createElement("button"); b.textContent = v; b.setAttribute("aria-pressed", k === cur);
+    b.onclick = () => { set(k); render(); }; box.appendChild(b);
+  });
+}
+function status(t, err) { return `<div class="lens-status ${err ? "err" : ""}"><span class="dot"></span>${t}</div>`; }
+function render() {
+  document.querySelectorAll("#estado button").forEach((b, i) => b.setAttribute("aria-pressed", Object.keys(estados)[i] === est));
+  document.querySelectorAll("#formato button").forEach((b, i) => b.setAttribute("aria-pressed", Object.keys(formatos)[i] === fmt));
+  let h = "";
+  if (est === "vazio") h = status("Pronto para ouvir");
+  else if (est === "ouvindo") h = status("Ouvindo") + `<p class="lens-q">${R.q.slice(0, 22)}...</p>`;
+  else if (est === "pensando") h = status("Buscando resposta") + `<p class="lens-q">${R.q}</p>`;
+  else if (est === "erro") h = status("Sem conexão. Só notas locais.", true);
+  else {
+    h = `<p class="lens-q">${R.q}</p>`;
+    if (fmt === "bullets") h += `<ul class="lens-body">${R.bullets.map((x) => `<li>${x}</li>`).join("")}</ul>`;
+    else if (fmt === "kw") h += `<div class="kw">${R.kw.map((x) => `<span>${x}</span>`).join("")}</div>`;
+    else h += `<p class="lens-title" style="font-size:32px;line-height:42px;font-weight:400">${R.full}</p>`;
+  }
+  $("lens").innerHTML = h;
+  $("meta").textContent = `estado: ${est} · formato: ${fmt} · 600x600 px`;
+}
+btns($("estado"), estados, est, (k) => (est = k));
+btns($("formato"), formatos, fmt, (k) => (fmt = k));
+render();
+</script>
+</body>
+</html>
