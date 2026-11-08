@@ -1,0 +1,40 @@
+/* Moldura e componentes de tela do iPhone, compartilhados por T03 a T07. Tokens em tokens.css. */
+main { display: grid; place-items: center; padding: var(--s5) var(--s4); }
+.phone { width: 390px; max-width: 100%; height: 780px; background: var(--background); border: 1px solid var(--border); border-radius: 40px; display: flex; flex-direction: column; overflow: hidden; }
+.top { padding: var(--s6) var(--s4) var(--s2); display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+h2 { font-size: 28px; line-height: 34px; margin: 0; font-weight: 700; }
+.body { flex: 1; overflow: auto; padding: var(--s2) var(--s4) var(--s4); display: grid; gap: var(--s3); align-content: start; }
+.sec { font-size: 12px; line-height: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: var(--s2); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+.item { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s4); min-height: 56px; border-bottom: 1px solid var(--border); }
+.item:last-child { border-bottom: 0; }
+.item .t { display: grid; gap: 2px; } .item .t b { font-weight: 600; } .item .t span, .cap { font-size: 12px; line-height: 16px; color: var(--muted); }
+.v { color: var(--muted); font-size: 15px; white-space: nowrap; }
+.seg { display: grid; grid-auto-flow: column; gap: var(--s1); padding: var(--s1); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+.seg div { min-height: 44px; display: grid; place-items: center; border-radius: var(--r-sm); font-size: 15px; }
+.seg div.on { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.tog { width: 40px; height: 24px; border-radius: 12px; background: var(--border); position: relative; flex: none; }
+.tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--foreground); }
+.tog.on { background: var(--primary); } .tog.on::after { left: 18px; background: var(--primary-foreground); }
+.range { height: 6px; border-radius: 3px; background: var(--border); position: relative; margin: var(--s3) 0 var(--s2); }
+.range i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--primary); }
+.range i::after { content: ""; position: absolute; right: -11px; top: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); border: 3px solid var(--background); }
+.badge { display: inline-flex; align-items: center; gap: var(--s2); font-size: 15px; line-height: 20px; padding: var(--s1) var(--s3); border-radius: 999px; border: 1px solid var(--border); background: var(--surface); width: fit-content; }
+.badge i { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.badge.ok i { background: var(--success); } .badge.act i { background: var(--primary); } .badge.err i { background: var(--danger); }
+.banner { border-radius: var(--r-md); padding: var(--s3) var(--s4); border: 1px solid var(--danger); background: var(--surface); font-size: 15px; line-height: 20px; }
+.banner b { color: var(--danger); }
+.field { min-height: 44px; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px var(--s3); background: var(--background); font: 17px/24px var(--font); }
+.field.err { border-color: var(--danger); } .errmsg { color: var(--danger); font-size: 12px; line-height: 16px; }
+.empty { text-align: center; color: var(--muted); padding: var(--s6) var(--s4); display: grid; gap: var(--s3); justify-items: center; }
+.empty h3 { margin: 0; color: var(--foreground); font-size: 20px; line-height: 25px; }
+.btn { min-height: 56px; padding: 0 var(--s5); border-radius: var(--r-md); border: 0; background: var(--primary); color: var(--primary-foreground); font: 600 17px var(--font); display: grid; place-items: center; }
+.btn.sec { background: var(--surface); color: var(--foreground); border: 1px solid var(--border); }
+.btn.dng { background: var(--surface); color: var(--danger); border: 1px solid var(--danger); }
+.ghost { min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font: 15px var(--font); display: grid; place-items: center; }
+.bar { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; } .bar i { display: block; height: 100%; background: var(--primary); }
+.act { padding: var(--s3) var(--s4); border-top: 1px solid var(--border); display: grid; gap: var(--s2); }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
+.tabs div { min-height: 56px; display: grid; place-items: center; font-size: 12px; line-height: 16px; color: var(--muted); }
+.tabs div[aria-current] { color: var(--primary); font-weight: 600; }
+.meta { font: 12px/16px var(--mono); color: var(--muted); margin-top: var(--s3); text-align: center; }

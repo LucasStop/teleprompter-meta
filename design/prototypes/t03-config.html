@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T03 Ajustes</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="phone.css">
+</head>
+<body>
+<script src="proto.js"></script>
+<script>
+const base = (chave) => `<div class="sec">Resposta</div><div class="seg" role="radiogroup" aria-label="Formato"><div class="on">Bullets</div><div>Palavras-chave</div><div>Texto</div></div>
+<div class="sec">Detecção de pergunta</div><div class="card"><div class="item"><div class="t"><b>Pausa para fim da pergunta</b><span>Quanto silêncio encerra a pergunta</span></div><span class="v">1,2 s</span></div><div class="item" style="display:block"><div class="t"><b>Limiar de similaridade</b><span>Abaixo disso: "não encontrei no material"</span></div><div class="range"><i style="width:62%"></i></div><div class="cap" style="display:flex;justify-content:space-between"><span>Mais respostas</span><span>0,62</span><span>Mais rigor</span></div></div></div>
+<div class="sec">Fontes de contexto</div><div class="card"><div class="item"><b>Notas de Q&amp;A</b><div class="tog on"></div></div><div class="item"><b>README e documentos</b><div class="tog on"></div></div><div class="item"><b>Código do repositório</b><div class="tog on"></div></div></div>
+<div class="sec">Provedor de LLM</div><div class="card" style="padding:var(--s3) var(--s4);display:grid;gap:var(--s2)"><label class="cap" for="k">Chave de API (Keychain)</label><div class="field ${chave ? "err" : ""}" id="k">${chave ? "sk-••••••••" : "Chave salva ••••4f2a"}</div>${chave ? '<span class="errmsg">Chave recusada pelo provedor. Confira e salve de novo.</span>' : ""}</div>
+<div class="sec">Aparência</div><div class="seg"><div class="on">Sistema</div><div>Claro</div><div>Escuro</div></div>`;
+proto({ title: "T03 Ajustes", tab: "Ajustes", titulo: "Ajustes", inicial: "padrao", estados: { padrao: ["Padrão", base(false)], erro: ["Chave inválida", base(true)] } });
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T04 Material</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="phone.css">
+</head>
+<body>
+<script src="proto.js"></script>
+<script>
+const fonte = (n, d, v) => `<div class="item"><div class="t"><b>${n}</b><span>${d}</span></div><span class="v">${v}</span></div>`;
+proto({ title: "T04 Material", tab: "Material", titulo: "Material", inicial: "padrao",
+ estados: {
+  vazio: ["Vazio", `<div class="empty"><h3>Nenhum material importado</h3><span>Importe notas de Q&amp;A, README, documentos ou o repositório. O chat só responde com isso.</span></div>`],
+  padrao: ["Padrão", `<div class="badge ok"><i></i>Índice atualizado há 2 h</div><div class="sec">Fontes</div><div class="card">${fonte("Notas de Q&A", "30 perguntas", "30 itens")}${fonte("README.md", "Importado hoje", "12 trechos")}${fonte("Documentos", "PRD, ADRs, plano", "148 trechos")}${fonte("Repositório", "teleprompter-meta @ 9ac027f", "812 trechos")}</div>`],
+  carregando: ["Indexando", `<div class="badge act"><i></i>Indexando repositório</div><div class="card" style="padding:var(--s4);display:grid;gap:var(--s2)"><b>teleprompter-meta</b><div class="bar" role="progressbar" aria-valuenow="46"><i style="width:46%"></i></div><span class="cap">372 de 812 trechos</span></div>`],
+  erro: ["Erro", `<div class="banner"><b>Não consegui ler "docs/PRD.md".</b> Arquivo sem permissão de leitura. Escolha o arquivo de novo.</div><div class="card">${fonte("README.md", "Importado hoje", "12 trechos")}</div>`]
+ },
+ acao: { vazio: `<div class="btn">Importar material</div>`, padrao: `<div class="btn">Importar material</div><div class="btn dng">Limpar índice</div>`, erro: `<div class="btn">Tentar de novo</div>` } });
+</script>
+</body>
+</html>

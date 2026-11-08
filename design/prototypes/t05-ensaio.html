@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T05 Ensaio</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="phone.css">
+</head>
+<body>
+<script src="proto.js"></script>
+<script>
+const q = (t, l, ok) => `<div class="item"><div class="t"><b>${t}</b><span>${l}</span></div><span class="badge ${ok ? "ok" : "err"}"><i></i>${ok ? "ok" : "lento"}</span></div>`;
+proto({ title: "T05 Ensaio", tab: "Ensaio", titulo: "Ensaio", inicial: "padrao",
+ estados: {
+  vazio: ["Vazio", `<div class="empty"><h3>Sem perguntas gravadas</h3><span>Adicione áudios das perguntas da banca para ensaiar sem os óculos.</span></div>`],
+  padrao: ["Resultado", `<div class="card" style="padding:var(--s4);display:grid;gap:var(--s1)"><span class="cap">Último ensaio · 30 perguntas</span><b>WER 11% · primeiro texto 1,4 s (mediana)</b><span class="cap">Metas: WER abaixo de 15%, primeiro texto abaixo de 2 s</span></div><div class="sec">Perguntas</div><div class="card">${q("Por que Swift nativo?", "WER 4% · 0,6 s · nota de Q&A", 1)}${q("Como a busca funciona?", "WER 9% · 1,3 s · LLM", 1)}${q("Qual o orçamento?", "WER 12% · não encontrei no material", 1)}${q("E se a rede cair?", "WER 14% · 2,4 s · LLM", 0)}</div>`],
+  rodando: ["Rodando", `<div class="badge act"><i></i>Ensaiando 12 de 30</div><div class="bar" role="progressbar" aria-valuenow="40"><i style="width:40%"></i></div><div class="card" style="padding:var(--s4)"><span class="cap">Pergunta atual</span><div>Como a busca funciona?</div></div>`]
+ },
+ acao: { vazio: `<div class="btn">Adicionar áudios</div>`, padrao: `<div class="btn">Ensaiar tudo</div>`, rodando: `<div class="btn sec">Parar ensaio</div>` } });
+</script>
+</body>
+</html>
