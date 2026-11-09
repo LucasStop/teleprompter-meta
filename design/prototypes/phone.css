@@ -24,6 +24,8 @@ h2 { font-size: 28px; line-height: 34px; margin: 0; font-weight: 700; }
 .badge.ok i { background: var(--success); } .badge.act i { background: var(--primary); } .badge.err i { background: var(--danger); }
 .banner { border-radius: var(--r-md); padding: var(--s3) var(--s4); border: 1px solid var(--danger); background: var(--surface); font-size: 15px; line-height: 20px; }
 .banner b { color: var(--danger); }
+.banner.info { border-color: var(--border); }
+.banner.info b { color: var(--foreground); }
 .field { min-height: 44px; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px var(--s3); background: var(--background); font: 17px/24px var(--font); }
 .field.err { border-color: var(--danger); } .errmsg { color: var(--danger); font-size: 12px; line-height: 16px; }
 .empty { text-align: center; color: var(--muted); padding: var(--s6) var(--s4); display: grid; gap: var(--s3); justify-items: center; }

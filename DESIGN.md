@@ -111,7 +111,7 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Cartão / painel | padrão, destaque | md | padrão, vazio | idem | visual |
 | Lista | notas de Q&A, documentos | md | vazio, carregando, erro | idem | componente |
 | Navegação | abas inferiores (Sessão, Material, Ensaio, Ajustes) | md | ativo | idem | E2E |
-| Alerta / banner | info, warning, danger | md | padrão, dispensável | idem | visual |
+| Alerta / banner | info (borda neutra, ex.: arquivos ignorados na importação), warning, danger (só erro) | md | padrão, dispensável | idem | visual |
 | Selo de estado | ouvindo, transcrevendo, pensando, respondendo, erro, desconectado | sm | todos | idem | componente + visual |
 | Mensagem de chat | pergunta, resposta (com fontes), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
 | Compositor | texto, microfone, escuta contínua | md | vazio, digitando, ouvindo, desabilitado | idem | componente + a11y |
