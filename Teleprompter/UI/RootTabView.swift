@@ -25,6 +25,7 @@ public struct RootTabView: View {
     public static let tabs: [AppTab] = [.chat, .material, .ensaio, .ajustes]
 
     @State private var selectedTab: AppTab = .chat
+    @State private var isShowingConversations: Bool = false
     private let environment: AppEnvironment
 
     public init() {
@@ -37,10 +38,28 @@ public struct RootTabView: View {
 
     public var body: some View {
         TabView(selection: $selectedTab) {
-            ChatView(
-                viewModel: environment.conversationViewModel,
-                lens: environment.lens
-            )
+            Group {
+                if isShowingConversations {
+                    ConversationsView(
+                        viewModel: environment.conversationsViewModel,
+                        onBack: {
+                            isShowingConversations = false
+                        },
+                        onSelectConversation: { conversation in
+                            openConversation(conversation)
+                            isShowingConversations = false
+                        }
+                    )
+                } else {
+                    ChatView(
+                        viewModel: environment.conversationViewModel,
+                        lens: environment.lens,
+                        onOpenConversations: {
+                            isShowingConversations = true
+                        }
+                    )
+                }
+            }
             .tabItem {
                 Label(AppTab.chat.title, systemImage: AppTab.chat.iconName)
             }
@@ -65,6 +84,49 @@ public struct RootTabView: View {
                 .tag(AppTab.ajustes)
         }
         .tint(Colors.primary)
+    }
+
+    private func openConversation(_ conversation: Conversation) {
+        var chatMessages: [ChatMessage] = []
+        var currentQuestion: Message?
+
+        for msg in conversation.messages {
+            if msg.role == .question {
+                currentQuestion = msg
+            } else if msg.role == .answer {
+                let qText = currentQuestion?.text ?? ""
+                let latencyReport = msg.latencyMs.map {
+                    LatencyReport(
+                        retrievalSeconds: 0,
+                        totalSeconds: Double($0) / 1000.0
+                    )
+                }
+                chatMessages.append(
+                    ChatMessage(
+                        id: msg.id,
+                        question: qText,
+                        answer: msg.text,
+                        sources: msg.sources,
+                        latency: latencyReport
+                    )
+                )
+                currentQuestion = nil
+            }
+        }
+
+        if let pendingQ = currentQuestion {
+            chatMessages.append(
+                ChatMessage(
+                    id: pendingQ.id,
+                    question: pendingQ.text,
+                    answer: "",
+                    sources: []
+                )
+            )
+        }
+
+        environment.conversationViewModel.messages = chatMessages
+        environment.conversationViewModel.state = chatMessages.isEmpty ? .vazio : .respondido
     }
 }
 

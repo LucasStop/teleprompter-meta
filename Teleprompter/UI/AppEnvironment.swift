@@ -9,13 +9,34 @@ import Observation
 final class AppEnvironment {
     let lens: SimulatedLens
     let conversationViewModel: ConversationViewModel
+    let conversationStore: any ConversationStore
+    let conversationsViewModel: ConversationsViewModel
 
     init(
         lens: SimulatedLens = SimulatedLens(),
-        conversationViewModel: ConversationViewModel? = nil
+        conversationViewModel: ConversationViewModel? = nil,
+        conversationStore: (any ConversationStore)? = nil
     ) {
         let lensInstance = lens
         self.lens = lensInstance
+
+        let store: any ConversationStore
+        if let conversationStore {
+            store = conversationStore
+        } else {
+            if let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                let dbURL = supportDir.appendingPathComponent("Teleprompter").appendingPathComponent("conversations.sqlite")
+                if let sqliteStore = try? SQLiteConversationStore(databaseURL: dbURL) {
+                    store = sqliteStore
+                } else {
+                    store = InMemoryConversationStore()
+                }
+            } else {
+                store = InMemoryConversationStore()
+            }
+        }
+        self.conversationStore = store
+        self.conversationsViewModel = ConversationsViewModel(store: store)
 
         if let conversationViewModel {
             self.conversationViewModel = conversationViewModel

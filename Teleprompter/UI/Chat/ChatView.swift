@@ -6,6 +6,7 @@ struct ChatView: View {
     @Bindable var viewModel: ConversationViewModel
     var lens: Lens
     var initialComposerText: String?
+    var onOpenConversations: (() -> Void)?
 
     @State private var composerText: String = ""
     @State private var isShowingLens: Bool = false
@@ -13,11 +14,13 @@ struct ChatView: View {
     init(
         viewModel: ConversationViewModel,
         lens: Lens,
-        initialComposerText: String? = nil
+        initialComposerText: String? = nil,
+        onOpenConversations: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.lens = lens
         self.initialComposerText = initialComposerText
+        self.onOpenConversations = onOpenConversations
     }
 
     private var screenState: ChatScreenState {
@@ -72,12 +75,34 @@ struct ChatView: View {
     // MARK: - Subviews
 
     private var headerView: some View {
-        HStack {
+        HStack(spacing: Spacing.s2) {
             Text("Chat")
                 .font(Typography.h1)
                 .foregroundStyle(Colors.foreground)
 
             Spacer()
+
+            if let onOpenConversations {
+                Button(
+                    action: onOpenConversations,
+                    label: {
+                        Text("Conversas")
+                            .font(Typography.bodySm)
+                            .fontWeight(.medium)
+                            .foregroundStyle(Colors.foreground)
+                            .padding(.horizontal, Spacing.s3)
+                            .frame(minHeight: Spacing.minTouchTarget)
+                            .background(Colors.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: CornerRadius.sm)
+                                    .stroke(Colors.border, lineWidth: Borders.standard)
+                            )
+                    }
+                )
+                .buttonStyle(.plain)
+                .accessibilityLabel("Abrir conversas")
+            }
 
             Button(
                 action: { isShowingLens = true },

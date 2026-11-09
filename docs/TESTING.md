@@ -22,7 +22,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | ResponseFormatter | Texto estoura a lente 600x600 | unitário, visual | Swift Testing; swift-snapshot-testing | local, PR | |
 | Glasses (DAT SDK) | Mudança do SDK em preview, queda de conexão | integração com Mock Device Kit, manual em campo | Mock Device Kit (não cobre display nem microfone); roteiro manual com óculos | PR (mock), manual (fases 3 a 5) | Teste automatizado com óculos reais não existe |
 | Interface iPhone e lente simulada | Estado ou variante quebrada, jornada quebrada | componente, visual, acessibilidade, E2E | XCTest das ViewModels + previews; swift-snapshot-testing; Maestro (flows YAML, fluxo entre telas T01 a T07); XCUITest (smoke pergunta -> resposta + performAccessibilityAudit) | local (Maestro), PR (XCUITest) | Maestro não roda no CI (lento e instável em runner macOS); não cobre óculos nem microfone |
-| Persistência e segredos | Perda de configuração, chave no repo | integração, segurança | XCTest com fakes de arquivo; gitleaks + revisão de Keychain | PR | Migração só se adotar SwiftData |
+| Persistência e segredos | Perda de conversas ou configuração, chave no repo | integração, migração, segurança | XCTest com SQLite temporário (roundtrip, ordenação por mais recente, deleção, migração reversível user_version); InMemoryConversationStore; gitleaks + revisão de Keychain | PR | - |
 | Infra / CI | Build quebrado | estático | GitHub Actions macOS, SwiftLint, gitleaks | PR | Sem deploy: instalação local no iPhone |
 
 "Roda em": local (pré-commit ou sob demanda), PR (CI bloqueante), deploy (smoke pós-deploy), nightly (agendado).
@@ -61,6 +61,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | US-11 | Importação indexa o material | Retrieval | integração |
 | US-12 | Entrada por texto e áudio recebem resposta pelo mesmo pipeline | ConversationViewModel, ConversationAudio | unitário, integração |
 | US-13 | Sem trecho acima do limiar responde "Não encontrei" sem chamar LLM | ConversationViewModel | unitário, aceitação |
+| US-14 | Conversas salvas no aparelho, abrir e apagar por mais recente | ConversationStoreTests, ConversationsViewModelTests | unitário, integração, componente |
 
 ## 6. Comandos
 
