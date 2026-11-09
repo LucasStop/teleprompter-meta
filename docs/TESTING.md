@@ -75,6 +75,9 @@ RUN_STT=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simula
 
 # Benchmark de recuperação (só roda com RUN_BENCH=1):
 TEST_RUNNER_RUN_BENCH=1 RUN_BENCH=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/RetrievalBenchmarkTests
+
+# Benchmark de provedores de LLM (só roda com RUN_LLM=1):
+TEST_RUNNER_RUN_LLM=1 RUN_LLM=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/LLMBenchmarkTests
 ```
 
 ### Gravação e execução do harness de WER
