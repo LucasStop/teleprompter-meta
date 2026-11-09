@@ -32,10 +32,44 @@ extension AnswerFormat {
 
 /// Constantes do domínio de configurações e persistência.
 enum SettingsConstants {
-    /// Chave do Keychain para a chave de API do LLM (ADR-005).
+    /// Chave do Keychain para a chave de API do LLM Personalizado (ADR-005).
     static let llmApiKeySecretKey = "llm.apiKey"
+    /// Chave do Keychain para a chave de API do OpenRouter.
+    static let openRouterApiKeySecretKey = "llm.openrouter.apiKey"
     /// Chave do UserDefaults para preferências não secretas.
     static let userDefaultsSettingsKey = "br.com.lucasstop.teleprompter.settings"
+}
+
+/// Provedores de LLM suportados pelo app.
+enum LLMProvider: String, Sendable, Codable, CaseIterable, Identifiable {
+    case apple
+    case openrouter
+    case custom
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .apple: return "Apple"
+        case .openrouter: return "OpenRouter"
+        case .custom: return "Personalizado"
+        }
+    }
+}
+
+/// Formatos de API de LLM suportados no modo Personalizado.
+enum LLMFormat: String, Sendable, Codable, CaseIterable, Identifiable {
+    case openai
+    case anthropic
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .openai: return "OpenAI"
+        case .anthropic: return "Anthropic"
+        }
+    }
 }
 
 /// Entidade de configurações do app (docs/DATA.md e PRD US-07).
@@ -52,6 +86,7 @@ struct Settings: Sendable, Codable, Equatable {
     var llmBaseURL: String
     var llmModel: String
     var llmProvider: String
+    var llmFormat: String
 
     static let defaultQAThreshold: Double = 0.40
     static let defaultChunkThreshold: Double = 0.25
@@ -75,7 +110,8 @@ struct Settings: Sendable, Codable, Equatable {
         appearance: .system,
         llmBaseURL: "",
         llmModel: "",
-        llmProvider: ""
+        llmProvider: "openrouter",
+        llmFormat: "openai"
     )
 
     init(
@@ -90,7 +126,8 @@ struct Settings: Sendable, Codable, Equatable {
         appearance: AppearancePreference = .system,
         llmBaseURL: String = "",
         llmModel: String = "",
-        llmProvider: String = ""
+        llmProvider: String = "openrouter",
+        llmFormat: String = "openai"
     ) {
         self.format = format
         self.qaThreshold = qaThreshold
@@ -104,6 +141,7 @@ struct Settings: Sendable, Codable, Equatable {
         self.llmBaseURL = llmBaseURL
         self.llmModel = llmModel
         self.llmProvider = llmProvider
+        self.llmFormat = llmFormat
     }
 
     enum CodingKeys: String, CodingKey {
@@ -119,6 +157,7 @@ struct Settings: Sendable, Codable, Equatable {
         case llmBaseURL
         case llmModel
         case llmProvider
+        case llmFormat
     }
 
     init(from decoder: Decoder) throws {
@@ -134,7 +173,29 @@ struct Settings: Sendable, Codable, Equatable {
         self.appearance = try container.decodeIfPresent(AppearancePreference.self, forKey: .appearance) ?? .system
         self.llmBaseURL = try container.decodeIfPresent(String.self, forKey: .llmBaseURL) ?? ""
         self.llmModel = try container.decodeIfPresent(String.self, forKey: .llmModel) ?? ""
-        self.llmProvider = try container.decodeIfPresent(String.self, forKey: .llmProvider) ?? ""
+
+        let decodedFormat = try container
+            .decodeIfPresent(String.self, forKey: .llmFormat)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let decodedProvider = try container
+            .decodeIfPresent(String.self, forKey: .llmProvider)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        if decodedProvider == "openai" {
+            self.llmProvider = "custom"
+            self.llmFormat = "openai"
+        } else if decodedProvider == "anthropic" {
+            self.llmProvider = "custom"
+            self.llmFormat = "anthropic"
+        } else if let decodedProvider, !decodedProvider.isEmpty {
+            self.llmProvider = decodedProvider
+            self.llmFormat = decodedFormat ?? "openai"
+        } else {
+            self.llmProvider = "openrouter"
+            self.llmFormat = decodedFormat ?? "openai"
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -151,6 +212,7 @@ struct Settings: Sendable, Codable, Equatable {
         try container.encode(llmBaseURL, forKey: .llmBaseURL)
         try container.encode(llmModel, forKey: .llmModel)
         try container.encode(llmProvider, forKey: .llmProvider)
+        try container.encode(llmFormat, forKey: .llmFormat)
     }
 
     /// Garante que os limiares estejam dentro de faixas válidas.

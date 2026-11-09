@@ -40,6 +40,7 @@ Erro tipado por parte (`AudioError`, `STTError`, `LLMError`, `GlassesError`). Me
 | `ResponseFormatter` | texto + formato -> conteúdo para a lente | puro | unitário, visual |
 | `Lens` | exibe/limpa conteúdo; emite gestos | `SimulatedLens`, `GlassesLens` | E2E, manual |
 | `Clock` | `now() -> ContinuousClock.Instant` | `SystemClock`, `TestClock` (fake) | unitário |
+| `OpenRouterAuthenticating` | geração PKCE, montagem de URL e troca de código -> chave | `OpenRouterAuthService`, fake | unitário |
 
 ## 8. Contrato com o provedor de LLM (externo)
 
@@ -83,7 +84,46 @@ Endpoint compatível com chat completions (OpenAI format), consumido por `Stream
 - `.httpStatus(Int)`: status HTTP fora de 200...299 (ex.: 401, 500).
 - `.invalidResponse`: payload SSE ou JSON que não segue a estrutura esperada.
 
+### 8.4. Autenticação OAuth PKCE com OpenRouter (externo)
+
+Fluxo consumido por `OpenRouterAuthService` (issue #75) via RFC 7636 (PKCE com método S256):
+
+1. **Abertura de autorização (navegador via `ASWebAuthenticationSession`)**:
+   - **Método / URL**: `GET https://openrouter.ai/auth?callback_url=teleprompter://openrouter&code_challenge=<challenge>&code_challenge_method=S256`
+   - **Parâmetros**:
+     - `callback_url`: URL scheme registrado da aplicação (`teleprompter://openrouter`).
+     - `code_challenge`: `Base64URL(SHA256(code_verifier))` gerado localmente a partir de 32 bytes aleatórios sem padding.
+     - `code_challenge_method`: `"S256"`.
+   - **Retorno**: interceptação do callback `teleprompter://openrouter?code=<code>`.
+
+2. **Troca do código por chave permanente de API**:
+   - **Método / URL**: `POST https://openrouter.ai/api/v1/auth/keys`
+   - **Headers**:
+     - `Content-Type: application/json`
+     - `Accept: application/json`
+   - **Corpo (JSON)**:
+     ```json
+     {
+       "code": "<code retornado no callback>",
+       "code_verifier": "<code_verifier gerado no dispositivo>",
+       "code_challenge_method": "S256"
+     }
+     ```
+   - **Resposta (JSON)**:
+     ```json
+     {
+       "key": "sk-or-v1-..."
+     }
+     ```
+   - **Tratamento de erros (`OpenRouterAuthError`)**:
+     - `.missingCallbackCode`: URL de retorno sem parâmetro `code`.
+     - `.httpError(Int)`: retorno HTTP fora de 200...299.
+     - `.missingKeyInResponse`: payload JSON sem campo `key` válido.
+     - `.userCancelled`: cancelamento da sessão web pelo usuário.
+   - **Segurança**: `code`, `verifier` e chave nunca são registrados em logs. A chave é salva diretamente no Keychain sob `SettingsConstants.openRouterApiKeySecretKey`.
+
 ## 9. Histórico de mudanças do contrato
+- 2026-11-09: contratos de autenticação OAuth PKCE com OpenRouter e provedores Apple e Personalizado adicionados (issue #75).
 - 2026-11-08: contrato `Clock` adicionado para medição determinística de latência e controle de silêncio (issue #36, US-01 a US-06, US-12, US-13).
 - 2026-11-08: contrato com provedor de LLM (SSE chat completions) e `SecretStore` adicionados (US-04).
 - 2026-11-08: contratos iniciais (rascunho).

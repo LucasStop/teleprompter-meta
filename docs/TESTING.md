@@ -18,7 +18,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | Conversa (chat e RAG fechado) | Inventar resposta fora do material, perder fonte, misturar entradas | unitário, integração, aceitação | Swift Testing com fakes de Retriever e AnswerGenerator; caso "sem trecho acima do limiar" nunca chama o LLM | local, PR | Qualidade semântica manual nos protótipos |
 | QuestionDetector | Corta a pergunta cedo ou dispara duas vezes | estático, unitário, aceitação | Swift Testing / XCTest (transcrições parciais sintéticas) | local, PR | Mutação só aqui (núcleo crítico) |
 | Retrieval | Resposta errada ou nota não encontrada | unitário, integração, aceitação | XCTest com corpus fixo de Q&A, README e código de exemplo | PR | Qualidade semântica avaliada manualmente nos protótipos |
-| LLM | Latência alta, contexto vazado, formato quebrado | integração com fake, contrato, desempenho | XCTest com fake de streaming; medição de primeiro token no protótipo P3 | PR | Chamada real ao provedor nunca roda no PR |
+| LLM | Latência alta, contexto vazado, formato quebrado | unitário, integração com fake, contrato, desempenho | XCTest com fake de streaming e URLProtocol stub (OpenRouterAuthServiceTests); benchmark físico via `tools/llm-bench.sh` | PR (fakes), iPhone físico (bench) | Chamada real ao provedor nunca roda no PR |
 | ResponseFormatter | Texto estoura a lente 600x600 | unitário, visual | Swift Testing; swift-snapshot-testing | local, PR | |
 | Glasses (DAT SDK) | Mudança do SDK em preview, queda de conexão | integração com Mock Device Kit, manual em campo | Mock Device Kit (não cobre display nem microfone); roteiro manual com óculos | PR (mock), manual (fases 3 a 5) | Teste automatizado com óculos reais não existe |
 | Interface iPhone e lente simulada | Estado ou variante quebrada, jornada quebrada | componente, visual, acessibilidade, E2E | XCTest das ViewModels + previews; swift-snapshot-testing; Maestro (flows YAML, fluxo entre telas T01 a T07); XCUITest (smoke pergunta -> resposta + performAccessibilityAudit) | local (Maestro), PR (XCUITest) | Maestro não roda no CI (lento e instável em runner macOS); não cobre óculos nem microfone |
@@ -52,10 +52,10 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | US-01 | WER abaixo de 15% | integração com áudios gravados | integração |
 | US-02 | Fim detectado uma única vez | QuestionDetector | unitário |
 | US-03 | Nota de Q&A devolvida sem LLM | Retrieval | unitário |
-| US-04 | Primeiro texto em menos de 2 s, só contexto recuperado | LLM com fake; protótipo P3 | integração, manual |
+| US-04 | Primeiro texto em menos de 2 s, só contexto recuperado | LLM com fake; OpenRouterAuthServiceTests; protótipo P3 | integração, unitário, manual |
 | US-05 | Respeita limite da lente e formato configurado | ResponseFormatter, SettingsViewModelTests | unitário, visual |
 | US-06 | Lente simulada exibe a resposta | lente simulada | E2E, visual |
-| US-07 | Configuração persiste | SettingsStoreTests, SettingsViewModelTests | integração, unitário |
+| US-07 | Configuração persiste e migra provedores | SettingsStoreTests, SettingsViewModelTests, AppEnvironmentIntegrationTests | integração, unitário, migração |
 | US-08 | Resposta na lente real | roteiro manual com óculos | manual |
 | US-09 | Gesto repete ou pula | Glasses + manual | manual |
 | US-10 | 60 min sem falha | sessão de campo | manual, desempenho |
@@ -94,6 +94,14 @@ TEST_RUNNER_RUN_BENCH=1 RUN_BENCH=1 xcodebuild test -scheme Teleprompter -destin
 
 # Benchmark de provedores de LLM (só roda com RUN_LLM=1):
 TEST_RUNNER_RUN_LLM=1 RUN_LLM=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/LLMBenchmarkTests
+
+# Benchmark de provedores de LLM no iPhone físico (tools/llm-bench.sh):
+# Mede TTFT e qualidade contra os modelos reais conectados (OpenRouter, Groq, Anthropic, OpenAI, Apple):
+export OPENROUTER_API_KEY="..."   # opcional: perfis via OpenRouter (or-haiku, or-openai)
+export GROQ_API_KEY="..."         # opcional: Groq direto
+export ANTHROPIC_API_KEY="..."    # opcional: Anthropic direto
+export OPENAI_API_KEY="..."       # opcional: OpenAI direto
+./tools/llm-bench.sh [UDID]       # detecta primeiro iPhone conectado se UDID for omitido
 ```
 
 ### Gravação, geração e execução do harness de WER

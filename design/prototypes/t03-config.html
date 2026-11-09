@@ -10,12 +10,32 @@
 <body>
 <script src="proto.js"></script>
 <script>
-const base = (chave) => `<div class="sec">Resposta</div><div class="seg" role="radiogroup" aria-label="Formato"><div class="on">Bullets</div><div>Palavras-chave</div><div>Texto</div></div>
+// Provedor: apple (no aparelho), openrouter (login OAuth), personalizado (URL, modelo, chave). Estado do OpenRouter: conectado, desconectado, erro.
+const provedor = (p, or) => {
+  const seg = `<div class="seg" role="radiogroup" aria-label="Provedor"><div class="${p === "apple" ? "on" : ""}">Apple</div><div class="${p === "openrouter" ? "on" : ""}">OpenRouter</div><div class="${p === "custom" ? "on" : ""}">Personalizado</div></div>`;
+  const card = (body) => `<div class="card" style="padding:var(--s3) var(--s4);display:grid;gap:var(--s2)">${body}</div>`;
+  if (p === "apple") return seg + card(`<b>Modelo no aparelho</b><span class="cap">Sem rede e sem chave: a pergunta não sai do iPhone. Exige Apple Intelligence ligado.</span>`);
+  if (p === "openrouter") {
+    const conta = or === "conectado"
+      ? `<div class="item" style="padding:0"><div class="t"><b>Conectado ao OpenRouter</b><span>Chave no Keychain ••••4f2a</span></div><span class="v">Sair</span></div>`
+      : `<button class="btn" style="width:100%">Entrar com OpenRouter</button><span class="cap">Abre o login do OpenRouter; a chave volta direto para o Keychain.</span>${or === "erro" ? '<span class="errmsg">Login cancelado ou recusado. Tente de novo.</span>' : ""}`;
+    return seg + card(`${conta}<label class="cap" for="m">Modelo</label><div class="field" id="m">anthropic/claude-haiku</div>`);
+  }
+  return seg + card(`<label class="cap">Formato</label><div class="seg"><div class="on">OpenAI</div><div>Anthropic</div></div><label class="cap" for="u">URL base</label><div class="field" id="u">https://api.groq.com/openai/v1</div><label class="cap" for="m">Modelo</label><div class="field" id="m">llama-3.3-70b-versatile</div><label class="cap" for="k">Chave de API (Keychain)</label><div class="field ${or === "erro" ? "err" : ""}" id="k">${or === "erro" ? "sk-••••••••" : "Chave salva ••••4f2a"}</div>${or === "erro" ? '<span class="errmsg">Chave recusada pelo provedor. Confira e salve de novo.</span>' : ""}`);
+};
+const base = (p, or) => `<div class="sec">Resposta</div><div class="seg" role="radiogroup" aria-label="Formato"><div class="on">Bullets</div><div>Palavras-chave</div><div>Texto</div></div>
 <div class="sec">Detecção de pergunta</div><div class="card"><div class="item"><div class="t"><b>Pausa para fim da pergunta</b><span>Quanto silêncio encerra a pergunta</span></div><span class="v">1,2 s</span></div><div class="item" style="display:block"><div class="t"><b>Limiar de similaridade</b><span>Abaixo disso: "não encontrei no material"</span></div><div class="range"><i style="width:62%"></i></div><div class="cap" style="display:flex;justify-content:space-between"><span>Mais respostas</span><span>0,62</span><span>Mais rigor</span></div></div></div>
 <div class="sec">Fontes de contexto</div><div class="card"><div class="item"><b>Notas de Q&amp;A</b><div class="tog on"></div></div><div class="item"><b>README e documentos</b><div class="tog on"></div></div><div class="item"><b>Código do repositório</b><div class="tog on"></div></div></div>
-<div class="sec">Provedor de LLM</div><div class="card" style="padding:var(--s3) var(--s4);display:grid;gap:var(--s2)"><label class="cap" for="k">Chave de API (Keychain)</label><div class="field ${chave ? "err" : ""}" id="k">${chave ? "sk-••••••••" : "Chave salva ••••4f2a"}</div>${chave ? '<span class="errmsg">Chave recusada pelo provedor. Confira e salve de novo.</span>' : ""}</div>
+<div class="sec">Provedor de LLM</div>${provedor(p, or)}
 <div class="sec">Aparência</div><div class="seg"><div class="on">Sistema</div><div>Claro</div><div>Escuro</div></div>`;
-proto({ title: "T03 Ajustes", tab: "Ajustes", titulo: "Ajustes", inicial: "padrao", estados: { padrao: ["Padrão", base(false)], erro: ["Chave inválida", base(true)] } });
+proto({ title: "T03 Ajustes", tab: "Ajustes", titulo: "Ajustes", inicial: "padrao", estados: {
+  padrao: ["OpenRouter conectado", base("openrouter", "conectado")],
+  login: ["OpenRouter sem login", base("openrouter", "desconectado")],
+  loginErro: ["Login falhou", base("openrouter", "erro")],
+  apple: ["Apple no aparelho", base("apple")],
+  custom: ["Personalizado", base("custom")],
+  erro: ["Chave inválida", base("custom", "erro")]
+} });
 </script>
 </body>
 </html>

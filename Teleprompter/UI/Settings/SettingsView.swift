@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Tela T03 Configurações (Ajustes) - PRD US-05, US-07 e design/prototypes/t03-config.html.
+/// Tela T03 Configurações (Ajustes) - PRD US-05, US-07, issue #75 e design/prototypes/t03-config.html.
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
 
@@ -137,159 +137,39 @@ extension SettingsView {
         .frame(minHeight: 56)
     }
 
+    // MARK: - Provedor de LLM
+
+    private var selectedProviderBinding: Binding<LLMProvider> {
+        Binding(
+            get: {
+                let raw = viewModel.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return LLMProvider(rawValue: raw) ?? .openrouter
+            },
+            set: { viewModel.llmProvider = $0.rawValue }
+        )
+    }
+
     private var llmProviderSection: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             sectionHeader("Provedor de LLM")
-            VStack(alignment: .leading, spacing: Spacing.s3) {
-                Text("Provedor")
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
-
-                SegmentedChoiceRow(
-                    items: LLMProviderOption.allCases,
-                    titleFor: \.title,
-                    selection: Binding(
-                        get: {
-                            let provider = viewModel.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                            return provider == "anthropic" ? .anthropic : .openai
-                        },
-                        set: { viewModel.llmProvider = $0.rawValue }
-                    )
-                )
-
-                Divider().background(Colors.border)
-
-                Text("URL Base")
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
-
-                TextField("https://api.openai.com/v1", text: $viewModel.llmBaseURL)
-                    .font(Typography.bodySm)
-                    .foregroundStyle(Colors.foreground)
-                    .padding(.horizontal, Spacing.s3)
-                    .frame(minHeight: Spacing.minTouchTarget)
-                    .background(Colors.background)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.sm)
-                            .stroke(Colors.border, lineWidth: Borders.standard)
-                    )
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityLabel("URL Base do LLM")
-
-                Divider().background(Colors.border)
-
-                Text("Modelo")
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
-
-                TextField("gpt-4o-mini", text: $viewModel.llmModel)
-                    .font(Typography.bodySm)
-                    .foregroundStyle(Colors.foreground)
-                    .padding(.horizontal, Spacing.s3)
-                    .frame(minHeight: Spacing.minTouchTarget)
-                    .background(Colors.background)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.sm)
-                            .stroke(Colors.border, lineWidth: Borders.standard)
-                    )
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityLabel("Modelo do LLM")
-
-                Divider().background(Colors.border)
-
-                Text("Chave de API (Keychain)")
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
-
-                apiKeyContentRow
-
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(Typography.caption)
-                        .foregroundStyle(Colors.danger)
-                        .accessibilityLabel("Mensagem de erro: \(errorMessage)")
-                }
-            }
-            .padding(Spacing.s4)
-            .background(Colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .stroke(hasError ? Colors.danger : Colors.border, lineWidth: Borders.standard)
+            SegmentedChoiceRow(
+                items: LLMProvider.allCases,
+                titleFor: \.title,
+                selection: selectedProviderBinding
             )
-        }
-    }
 
-    @ViewBuilder
-    private var apiKeyContentRow: some View {
-        if viewModel.hasSavedApiKey {
-            HStack(spacing: Spacing.s3) {
-                Text(viewModel.maskedApiKey ?? "Chave salva")
-                    .font(Typography.bodySm)
-                    .foregroundStyle(Colors.foreground)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Spacing.s3)
-                    .frame(minHeight: Spacing.minTouchTarget)
-                    .background(Colors.background)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.sm)
-                            .stroke(hasError ? Colors.danger : Colors.border, lineWidth: Borders.standard)
-                    )
-
-                Button(role: .destructive) {
-                    viewModel.removeApiKey()
-                } label: {
-                    Text("Remover")
-                        .font(Typography.bodySm)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Colors.danger)
-                        .frame(minHeight: Spacing.minTouchTarget)
-                        .padding(.horizontal, Spacing.s3)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Remover chave de API do Keychain")
-            }
-        } else {
-            HStack(spacing: Spacing.s3) {
-                SecureField("sk-••••••••", text: $viewModel.apiKeyInput)
-                    .font(Typography.bodySm)
-                    .foregroundStyle(Colors.foreground)
-                    .padding(.horizontal, Spacing.s3)
-                    .frame(minHeight: Spacing.minTouchTarget)
-                    .background(Colors.background)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.sm)
-                            .stroke(hasError ? Colors.danger : Colors.border, lineWidth: Borders.standard)
-                    )
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityLabel("Campo de chave de API")
-
-                Button {
-                    viewModel.saveApiKey()
-                } label: {
-                    Text("Salvar")
-                        .font(Typography.bodySm)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Colors.primaryForeground)
-                        .padding(.horizontal, Spacing.s4)
-                        .frame(minHeight: Spacing.minTouchTarget)
-                        .background(Colors.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Salvar chave de API no Keychain")
+            switch selectedProviderBinding.wrappedValue {
+            case .apple:
+                appleProviderCard
+            case .openrouter:
+                openRouterProviderCard
+            case .custom:
+                customProviderCard
             }
         }
     }
 
-    private var hasError: Bool {
+    var hasError: Bool {
         if case .erro = viewModel.state {
             return true
         }
@@ -341,11 +221,23 @@ extension SettingsView {
 // MARK: - Previews
 
 @MainActor
-private func previewSettingsView(apiKey: String? = nil, errorMessage: String? = nil) -> SettingsView {
-    let settingsStore = InMemorySettingsStore()
-    let secretStore = InMemorySecretStore(
-        initial: apiKey.map { [SettingsConstants.llmApiKeySecretKey: $0] } ?? [:]
-    )
+private func previewSettingsView(
+    provider: LLMProvider = .openrouter,
+    openRouterKey: String? = nil,
+    apiKey: String? = nil,
+    errorMessage: String? = nil
+) -> SettingsView {
+    var initialSettings = Settings.default
+    initialSettings.llmProvider = provider.rawValue
+    let settingsStore = InMemorySettingsStore(initial: initialSettings)
+    var secrets: [String: String] = [:]
+    if let openRouterKey {
+        secrets[SettingsConstants.openRouterApiKeySecretKey] = openRouterKey
+    }
+    if let apiKey {
+        secrets[SettingsConstants.llmApiKeySecretKey] = apiKey
+    }
+    let secretStore = InMemorySecretStore(initial: secrets)
     let state: SettingsScreenState = errorMessage.map { .erro(message: $0) } ?? .padrao
     let viewModel = SettingsViewModel(
         settingsStore: settingsStore,
@@ -355,18 +247,28 @@ private func previewSettingsView(apiKey: String? = nil, errorMessage: String? = 
     return SettingsView(viewModel: viewModel)
 }
 
-#Preview("Padrão - Claro") {
-    previewSettingsView(apiKey: "sk-proj-4f2a").preferredColorScheme(.light)
+#Preview("OpenRouter Conectado") {
+    previewSettingsView(provider: .openrouter, openRouterKey: "sk-or-v1-4f2a").preferredColorScheme(.dark)
 }
 
-#Preview("Padrão - Escuro") {
-    previewSettingsView(apiKey: "sk-proj-4f2a").preferredColorScheme(.dark)
+#Preview("OpenRouter Sem Login") {
+    previewSettingsView(provider: .openrouter).preferredColorScheme(.dark)
 }
 
-#Preview("Erro - Claro") {
-    previewSettingsView(errorMessage: "Chave recusada pelo provedor. Confira e salve de novo.").preferredColorScheme(.light)
+#Preview("OpenRouter Login Erro") {
+    let err = "Login cancelado ou recusado. Tente de novo."
+    return previewSettingsView(provider: .openrouter, errorMessage: err).preferredColorScheme(.dark)
 }
 
-#Preview("Erro - Escuro") {
-    previewSettingsView(errorMessage: "Chave recusada pelo provedor. Confira e salve de novo.").preferredColorScheme(.dark)
+#Preview("Apple no aparelho") {
+    previewSettingsView(provider: .apple).preferredColorScheme(.dark)
+}
+
+#Preview("Personalizado Padrão") {
+    previewSettingsView(provider: .custom, apiKey: "sk-groq-4f2a").preferredColorScheme(.dark)
+}
+
+#Preview("Personalizado Erro") {
+    let err = "Chave recusada pelo provedor. Confira e salve de novo."
+    return previewSettingsView(provider: .custom, errorMessage: err).preferredColorScheme(.dark)
 }

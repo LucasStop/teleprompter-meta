@@ -23,6 +23,42 @@ private final class FailingSecretStore: SecretStore, @unchecked Sendable {
     }
 }
 
+private final class FakeOpenRouterAuthService: OpenRouterAuthenticating, @unchecked Sendable {
+    var shouldFailExchange: Bool = false
+    var returnedKey: String = "sk-or-v1-9988776655444f2a"
+
+    func generatePKCE() -> OpenRouterPKCE {
+        OpenRouterPKCE(verifier: "fake_verifier", challenge: "fake_challenge")
+    }
+
+    func makeAuthURL(challenge: String) -> URL {
+        URL(string: "https://openrouter.ai/auth?code_challenge=\(challenge)")!
+    }
+
+    func extractCode(from callbackURL: URL) throws -> String {
+        "fake_code_123"
+    }
+
+    func exchangeCode(code: String, verifier: String) async throws -> String {
+        if shouldFailExchange {
+            throw OpenRouterAuthError.httpError(statusCode: 401)
+        }
+        return returnedKey
+    }
+}
+
+@MainActor
+private final class FakeWebAuthSession: WebAuthenticationSessionProtocol {
+    var shouldCancel: Bool = false
+
+    func authenticate(url: URL, callbackURLScheme: String) async throws -> URL {
+        if shouldCancel {
+            throw OpenRouterAuthError.userCancelled
+        }
+        return URL(string: "\(callbackURLScheme)://openrouter?code=fake_code_123")!
+    }
+}
+
 @MainActor
 final class SettingsViewModelTests: XCTestCase {
     func testViewModelInitialStateWithDefaults() {
@@ -234,5 +270,117 @@ final class SettingsViewModelTests: XCTestCase {
 
         conversationVM.format = .keywords
         XCTAssertEqual(conversationVM.format, .keywords)
+    }
+}
+
+// MARK: - Testes de Provedores e OpenRouter
+
+extension SettingsViewModelTests {
+    func testProviderAndFormatPropertiesPersistToStore() {
+        let settingsStore = InMemorySettingsStore()
+        let secretStore = InMemorySecretStore()
+        let viewModel = SettingsViewModel(settingsStore: settingsStore, secretStore: secretStore)
+
+        viewModel.llmProvider = "apple"
+        XCTAssertEqual(settingsStore.load().llmProvider, "apple")
+
+        viewModel.llmProvider = "custom"
+        viewModel.llmFormat = "anthropic"
+        XCTAssertEqual(settingsStore.load().llmProvider, "custom")
+        XCTAssertEqual(settingsStore.load().llmFormat, "anthropic")
+    }
+
+    func testOpenRouterLoginSuccessFlow() async throws {
+        let settingsStore = InMemorySettingsStore()
+        let secretStore = InMemorySecretStore()
+        let fakeAuth = FakeOpenRouterAuthService()
+        let fakeWeb = FakeWebAuthSession()
+
+        let viewModel = SettingsViewModel(
+            settingsStore: settingsStore,
+            secretStore: secretStore,
+            authService: fakeAuth,
+            webAuthSession: fakeWeb
+        )
+
+        XCTAssertFalse(viewModel.hasSavedOpenRouterApiKey)
+        XCTAssertNil(viewModel.maskedOpenRouterApiKey)
+
+        await viewModel.startOpenRouterLogin()
+
+        XCTAssertTrue(viewModel.hasSavedOpenRouterApiKey)
+        XCTAssertEqual(viewModel.maskedOpenRouterApiKey, "Chave no Keychain ••••4f2a")
+        XCTAssertEqual(viewModel.state, .padrao)
+        XCTAssertNil(viewModel.errorMessage)
+
+        let saved = try secretStore.get(key: SettingsConstants.openRouterApiKeySecretKey)
+        XCTAssertEqual(saved, "sk-or-v1-9988776655444f2a")
+    }
+
+    func testOpenRouterLoginFailureWhenUserCancels() async {
+        let settingsStore = InMemorySettingsStore()
+        let secretStore = InMemorySecretStore()
+        let fakeAuth = FakeOpenRouterAuthService()
+        let fakeWeb = FakeWebAuthSession()
+        fakeWeb.shouldCancel = true
+
+        let viewModel = SettingsViewModel(
+            settingsStore: settingsStore,
+            secretStore: secretStore,
+            authService: fakeAuth,
+            webAuthSession: fakeWeb
+        )
+
+        await viewModel.startOpenRouterLogin()
+
+        XCTAssertFalse(viewModel.hasSavedOpenRouterApiKey)
+        XCTAssertEqual(viewModel.state, .erro(message: "Login cancelado ou recusado. Tente de novo."))
+        XCTAssertEqual(viewModel.errorMessage, "Login cancelado ou recusado. Tente de novo.")
+    }
+
+    func testOpenRouterLoginFailureWhenExchangeFails() async {
+        let settingsStore = InMemorySettingsStore()
+        let secretStore = InMemorySecretStore()
+        let fakeAuth = FakeOpenRouterAuthService()
+        fakeAuth.shouldFailExchange = true
+        let fakeWeb = FakeWebAuthSession()
+
+        let viewModel = SettingsViewModel(
+            settingsStore: settingsStore,
+            secretStore: secretStore,
+            authService: fakeAuth,
+            webAuthSession: fakeWeb
+        )
+
+        await viewModel.startOpenRouterLogin()
+
+        XCTAssertFalse(viewModel.hasSavedOpenRouterApiKey)
+        XCTAssertEqual(viewModel.state, .erro(message: "Login cancelado ou recusado. Tente de novo."))
+        XCTAssertEqual(viewModel.errorMessage, "Login cancelado ou recusado. Tente de novo.")
+    }
+
+    func testRemoveOpenRouterApiKeyDeletesFromSecretStore() throws {
+        let settingsStore = InMemorySettingsStore()
+        let secretStore = InMemorySecretStore(
+            initial: [SettingsConstants.openRouterApiKeySecretKey: "sk-or-v1-key1234"]
+        )
+        let viewModel = SettingsViewModel(settingsStore: settingsStore, secretStore: secretStore)
+
+        XCTAssertTrue(viewModel.hasSavedOpenRouterApiKey)
+        XCTAssertEqual(viewModel.maskedOpenRouterApiKey, "Chave no Keychain ••••1234")
+
+        viewModel.removeOpenRouterApiKey()
+
+        XCTAssertFalse(viewModel.hasSavedOpenRouterApiKey)
+        XCTAssertNil(viewModel.maskedOpenRouterApiKey)
+        XCTAssertNil(try secretStore.get(key: SettingsConstants.openRouterApiKeySecretKey))
+    }
+
+    func testAppleSupportedReflectsFoundationModelsSupport() {
+        let settingsStore = InMemorySettingsStore()
+        let secretStore = InMemorySecretStore()
+        let viewModel = SettingsViewModel(settingsStore: settingsStore, secretStore: secretStore)
+
+        XCTAssertEqual(viewModel.isAppleSupported, FoundationModelsAnswerGenerator.isSupported)
     }
 }

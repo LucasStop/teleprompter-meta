@@ -118,6 +118,8 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Transcrição ao vivo | parcial, final | md | vazio, ativo, erro | idem | componente |
 | Cartão de resposta | bullets, palavras-chave, texto completo | md | carregando (streaming), pronto, erro | idem | visual |
 | `LensView` (lente 600x600) | bullets, palavras-chave, texto completo, status | 600x600 | ouvindo, pensando, resposta, erro, vazio | `Teleprompter/Lens/` (a criar) | visual + manual no óculos |
+| Botão de login do provedor | primary full-width | lg (56 pt) | padrão, pressionado, carregando, desabilitado | `Teleprompter/UI/Settings/` | componente + a11y |
+| Linha "conectado" (provedor) | padrão com ação | md | padrão, ação | `Teleprompter/UI/Settings/` | componente + a11y |
 
 Por componente, registrar em `design/components.md` a anatomia e a regra de uso; o que não tiver variante documentada não existe.
 
@@ -169,4 +171,5 @@ Nenhuma tela é desenvolvida sem protótipo aprovado. O inventário e o status d
 - Sem referências ainda; adicionar links ou prints que representem o alvo.
 
 ## Histórico
+- 2026-11-09: adição dos componentes de autenticação OAuth de provedores (botão de login e linha conectado para OpenRouter em T03, issue #75).
 - 2026-11-08: criação e aprovação do design system.
