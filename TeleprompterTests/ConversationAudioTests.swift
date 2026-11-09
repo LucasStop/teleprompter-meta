@@ -61,6 +61,14 @@ private struct FailingRetriever: Retriever {
     }
 }
 
+private final class StepBox: @unchecked Sendable {
+    private var value = 0
+    func next() -> Int {
+        defer { value += 1 }
+        return value
+    }
+}
+
 private final class TimedFakeGenerator: AnswerGenerator, @unchecked Sendable {
     private(set) var calls = 0
     var firstTokenDelay: Duration = .zero
@@ -73,16 +81,14 @@ private final class TimedFakeGenerator: AnswerGenerator, @unchecked Sendable {
         let firstDelay = firstTokenDelay
         let totalDelay = totalDelay
 
-        var hasYieldedFirst = false
-        var hasYieldedSecond = false
+        let step = StepBox()
 
         return AsyncStream(unfolding: {
-            if !hasYieldedFirst {
-                hasYieldedFirst = true
+            let current = step.next()
+            if current == 0 {
                 clock?.advance(by: firstDelay)
                 return "resposta "
-            } else if !hasYieldedSecond {
-                hasYieldedSecond = true
+            } else if current == 1 {
                 clock?.advance(by: totalDelay)
                 return "gerada"
             } else {
