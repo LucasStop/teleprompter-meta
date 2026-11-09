@@ -29,6 +29,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 
 ## 3. Testes do projeto inteiro
 - Estático: SwiftLint + compilador com warnings como erro + gitleaks (`gitleaks detect --source . --redact --no-banner --config .gitleaks.toml`), no `lefthook.yml` e no job `gitleaks` do CI.
+- Verificado em 2026-11-09: com um token falso em stage, `lefthook run pre-commit` falha no passo `segredo` (gitleaks acha 1 vazamento) e barra o commit.
 - Smoke: o app compila e o pipeline com fakes devolve uma resposta na lente simulada; primeiro job do CI.
 - Regressão: a suíte completa roda em todo PR. Bug corrigido entra com teste que falha antes da correção, no mesmo PR.
 - Aceitação: cada história do `PRD.md` tem ao menos um teste (ou checagem manual descrita) ligado ao critério de aceite. Mapa em [Rastreabilidade](#5-rastreabilidade).
