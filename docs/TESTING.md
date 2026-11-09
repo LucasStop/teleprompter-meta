@@ -62,6 +62,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | US-12 | Entrada por texto e áudio recebem resposta pelo mesmo pipeline | ConversationViewModel, ConversationAudio | unitário, integração |
 | US-13 | Sem trecho acima do limiar responde "Não encontrei" sem chamar LLM | ConversationViewModel | unitário, aceitação |
 | US-14 | Conversas salvas no aparelho, abrir e apagar por mais recente | ConversationStoreTests, ConversationsViewModelTests | unitário, integração, componente |
+| US-01 a US-05 (T05) | Ensaio com perguntas gravadas, resposta, latência por etapa e WER | EnsaioRunnerTests, EnsaioViewModelTests | unitário, integração |
 
 ## 6. Comandos
 
