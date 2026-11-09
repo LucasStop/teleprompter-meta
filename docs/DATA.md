@@ -9,10 +9,26 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 - Ambientes: local e iPhone; teste com diretório temporário por execução. Sem produção separada.
 
 ### Configurações e Segredos (`SettingsStore` e `SecretStore`)
-- Configurações gerais (`SettingsStore`): armazenadas via `UserDefaultsSettingsStore` sob a chave `br.com.lucasstop.teleprompter.settings` como JSON codificado da struct `Settings` (incluindo `llmProvider`, `llmBaseURL`, `llmModel` com decodificação retrocompatível). Não contém segredos.
+- Configurações gerais (`SettingsStore`): armazenadas via `UserDefaultsSettingsStore` sob a chave `br.com.lucasstop.teleprompter.settings` como JSON codificado da struct `Settings` (incluindo `activeProjectId`, `llmProvider`, `llmBaseURL`, `llmModel` com decodificação retrocompatível via `decodeIfPresent`). Padrão de `activeProjectId`: `"default"`. Não contém segredos.
 - Chave de API de LLM (`SecretStore`): armazenada exclusivamente no Keychain via `KeychainStore` sob a chave `llm.apiKey` (serviço `br.com.lucasstop.teleprompter`). Nunca gravada em `UserDefaults`, arquivos de log ou transitada em texto plano pela interface.
 
-### Esquema SQLite do Índice Local (`LocalRetriever`)
+### Armazenamento de Projetos (`SQLiteProjectStore`)
+- Banco: `Application Support/Teleprompter/projects.sqlite`
+- Tabela `projects`:
+  - `id TEXT PRIMARY KEY`: identificador único estável (`default` para o projeto padrão gerado na primeira execução).
+  - `name TEXT NOT NULL`: nome legível do projeto.
+  - `created_at REAL NOT NULL`: timestamp epoch da criação em segundos.
+  - Índice: `idx_projects_name_nocase ON projects(name COLLATE NOCASE)` único para barrar nomes duplicados sem diferenciar maiúsculas/minúsculas.
+- Regras de integridade:
+  - Nome vazio ou contendo apenas espaços é recusado (`emptyName`).
+  - Nome duplicado (case-insensitive) é recusado (`duplicateName`).
+  - O projeto "Padrão" (`id: "default"`) é protegido contra exclusão (`cannotDeleteDefaultProject`), mas pode ser renomeado.
+
+### Esquema SQLite do Índice Local (`LocalRetriever` e `ProductionAppRetriever`)
+- Isolamento por projeto:
+  - Cada projeto possui um banco SQLite isolado em `Application Support/Teleprompter/index-<projectId>.sqlite`.
+  - Exceção retrocompatível: o projeto `default` continua usando o arquivo legado `retriever.sqlite` para manter intacto qualquer material previamente importado, sem necessidade de cópia ou migração.
+  - Ao excluir um projeto, o arquivo `index-<projectId>.sqlite` correspondente é removido do disco.
 - Tabela `chunks`:
   - `id INTEGER PRIMARY KEY AUTOINCREMENT`: chave primária interna do trecho.
   - `kind TEXT NOT NULL`: tipo do trecho (`qa`, `document`, `code`).
@@ -27,12 +43,15 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
   - Associação: `rowid` alinhado ao `id` da tabela `chunks`.
 
 ### Esquema SQLite do Armazenamento de Conversas (`SQLiteConversationStore`)
-- Tabela `conversations`:
+- Tabela `conversations` (esquema `user_version = 2`):
   - `id TEXT PRIMARY KEY`: identificador único (UUID).
+  - `project_id TEXT NOT NULL DEFAULT 'default'`: identificador do projeto ao qual a conversa pertence.
   - `title TEXT NOT NULL`: título curto derivado da primeira pergunta.
   - `created_at REAL NOT NULL`: timestamp epoch com precisão de milissegundos.
   - `updated_at REAL NOT NULL`: timestamp da última atualização para ordenação por mais recente.
-  - Índice: `idx_conversations_updated_at ON conversations(updated_at DESC)`.
+  - Índices:
+    - `idx_conversations_updated_at ON conversations(updated_at DESC)`.
+    - `idx_conversations_project_updated_at ON conversations(project_id, updated_at DESC)`.
 - Tabela `messages`:
   - `id TEXT PRIMARY KEY`: identificador único (UUID).
   - `conversation_id TEXT NOT NULL`: chave estrangeira referenciando `conversations(id)` com `ON DELETE CASCADE`.
@@ -47,13 +66,14 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 | Entidade | Responsabilidade | Chave | Relações | Dado pessoal? |
 |---|---|---|---|---|
-| Settings | Formato de resposta, limiares do detector, provedor/modelo/URL base de LLM | única | - | Não |
-| MaterialSource | Fonte de material importada (Q&A, README, doc, código) | path | tem Chunks no LocalRetriever | Não |
+| Project | Agrupa material, índice isolado e histórico de conversas | id | tem índice próprio (`index-<id>.sqlite`) e Conversations | Não |
+| Settings | Formato de resposta, limiares do detector, provedor/modelo/URL base de LLM, projeto ativo | única | referencia Project ativo | Não |
+| MaterialSource | Fonte de material importada (Q&A, README, doc, código) | path | tem Chunks no LocalRetriever do projeto | Não |
 | QANote | Pergunta esperada e resposta preparada | id | pertence a um Material | Não |
 | Document | README e documentos importados | id | tem Chunks | Não |
 | CodeFile | Arquivo do repositório indexado | caminho + commit | tem Chunks | Não |
 | Chunk | Trecho indexado para busca | id | de Document ou CodeFile | Não |
-| Conversation | Conversa do chat | id | tem Messages | Sim (texto das perguntas e respostas) |
+| Conversation | Conversa do chat | id | pertence a um Project; tem Messages | Sim (texto das perguntas e respostas) |
 | Message | Pergunta ou resposta, com fontes e latência | id | pertence a uma Conversation; cita Chunks | Sim |
 | Session | Registro opcional de ensaio (latência por etapa, sem a fala) | id | - | Não |
 
@@ -74,11 +94,15 @@ Arquivos de texto sem formato Q&A são quebrados via `MaterialChunker` por pará
 - Concorrência: escrita do índice em uma fila serial.
 
 ## 4. Migrações
-- **Índice de busca (`LocalRetriever`)**: descartável e reconstruído a partir das fontes (sem migração).
+- **Projetos (`SQLiteProjectStore`)**: tabela criada na primeira execução com o projeto "Padrão" (`id: "default"`).
+- **Índice de busca (`LocalRetriever` / `ProductionAppRetriever`)**: descartável e reconstruído a partir das fontes (sem migração). Cada projeto tem seu arquivo `index-<projectId>.sqlite`, exceto `default` que mantém `retriever.sqlite`.
 - **Conversas e mensagens (`SQLiteConversationStore`)**: versionado por `PRAGMA user_version`.
   - **Versão 1**: criação das tabelas `conversations` e `messages` e seus índices (`idx_conversations_updated_at`, `idx_messages_conversation`) com chave estrangeira e deleção em cascata (`ON DELETE CASCADE`).
-  - **Estratégia reversível**: cada versão implementa `migrate(to:)` e `rollback(to:)`. A reversão para versão 0 descarta as tabelas e índices criados e redefine `user_version = 0`.
-- **Configurações e Q&A**: Settings e QANote usam migração reversível se o esquema em arquivo mudar.
+  - **Versão 2**: adição da coluna `project_id TEXT NOT NULL DEFAULT 'default'` na tabela `conversations` e do índice composto `idx_conversations_project_updated_at ON conversations(project_id, updated_at DESC)`.
+  - **Estratégia reversível**: cada versão implementa `migrate(to:)` e `rollback(to:)`.
+    - Rollback 2 -> 1: remove o índice `idx_conversations_project_updated_at`, remove a coluna `project_id` via `ALTER TABLE conversations DROP COLUMN project_id` e redefine `user_version = 1`, preservando todas as conversas e mensagens existentes.
+    - Rollback 1 -> 0: descarta as tabelas `messages` e `conversations` e redefine `user_version = 0`.
+- **Configurações e Q&A**: Settings e QANote usam migração reversível se o esquema em arquivo mudar (campo `activeProjectId` com `decodeIfPresent`).
 
 ## 5. Dados pessoais e LGPD
 - Dados pessoais: nenhum de terceiros. A voz e o texto da pergunta podem sair para STT/LLM externo (registrar no ADR-005). Nenhuma transcrição em log.

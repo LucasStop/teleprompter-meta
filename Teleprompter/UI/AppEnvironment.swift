@@ -1,64 +1,6 @@
 import Foundation
 import Observation
 
-/// Recuperador de produção sobre SQLite que responde à atualização de limiares do SettingsStore
-/// e atua como índice para o MaterialViewModel.
-final class ProductionAppRetriever: Retriever, MaterialIndexable, @unchecked Sendable {
-    private let databaseURL: URL
-    private let settingsStore: any SettingsStore
-    private let lock = NSLock()
-    private var cachedRetriever: LocalRetriever?
-    private var cachedSettings: Settings?
-
-    init(databaseURL: URL, settingsStore: any SettingsStore) {
-        self.databaseURL = databaseURL
-        self.settingsStore = settingsStore
-    }
-
-    private func getRetriever(for settings: Settings) throws -> LocalRetriever {
-        lock.lock()
-        defer { lock.unlock() }
-
-        if let cached = cachedRetriever, let oldSettings = cachedSettings,
-           oldSettings.qaThreshold == settings.qaThreshold,
-           oldSettings.chunkThreshold == settings.chunkThreshold,
-           oldSettings.topK == settings.topK {
-            return cached
-        }
-
-        let retriever = try LocalRetriever(
-            databaseURL: databaseURL,
-            qaThreshold: settings.qaThreshold,
-            chunkThreshold: settings.chunkThreshold,
-            topK: settings.topK
-        )
-        self.cachedRetriever = retriever
-        self.cachedSettings = settings
-        return retriever
-    }
-
-    private func getAnyRetriever() throws -> LocalRetriever {
-        let settings = settingsStore.load()
-        return try getRetriever(for: settings)
-    }
-
-    func index(_ items: [IndexedChunk]) throws {
-        let retriever = try getAnyRetriever()
-        try retriever.index(items)
-    }
-
-    func removeSource(_ path: String) throws {
-        let retriever = try getAnyRetriever()
-        try retriever.removeSource(path)
-    }
-
-    func retrieve(_ question: String) async throws -> Retrieval {
-        let settings = settingsStore.load()
-        let retriever = try getRetriever(for: settings)
-        return try await retriever.retrieve(question)
-    }
-}
-
 /// Raiz de composição da aplicação Teleprompter (T02).
 /// Fabrica a versão de produção com hardware real e SQLite persistente,
 /// ou a versão de preview/teste com doubles em memória.
@@ -69,22 +11,28 @@ final class AppEnvironment {
     let conversationViewModel: ConversationViewModel
     let conversationStore: any ConversationStore
     let conversationsViewModel: ConversationsViewModel
+    let projectStore: any ProjectStore
+    let projectsViewModel: ProjectsViewModel
     let settingsStore: any SettingsStore
     let secretStore: any SecretStore
     let settingsViewModel: SettingsViewModel
     let materialViewModel: MaterialViewModel
     let ensaioViewModel: EnsaioViewModel
+    let retriever: any Retriever
 
     init(
         lens: SimulatedLens = SimulatedLens(),
         conversationViewModel: ConversationViewModel? = nil,
         conversationStore: (any ConversationStore)? = nil,
         conversationsViewModel: ConversationsViewModel? = nil,
+        projectStore: (any ProjectStore)? = nil,
+        projectsViewModel: ProjectsViewModel? = nil,
         settingsStore: (any SettingsStore)? = nil,
         secretStore: (any SecretStore)? = nil,
         settingsViewModel: SettingsViewModel? = nil,
         materialViewModel: MaterialViewModel? = nil,
-        ensaioViewModel: EnsaioViewModel? = nil
+        ensaioViewModel: EnsaioViewModel? = nil,
+        retriever: (any Retriever)? = nil
     ) {
         self.lens = lens
         let effectiveSettingsStore = settingsStore ?? UserDefaultsSettingsStore()
@@ -92,58 +40,112 @@ final class AppEnvironment {
         self.settingsStore = effectiveSettingsStore
         self.secretStore = effectiveSecretStore
 
-        let store = conversationStore ?? Self.defaultConversationStore()
+        let appSupportDir = Self.applicationSupportDirectoryURL()
+        let resolvedProjectStore = projectStore ?? Self.defaultProjectStore()
+        self.projectStore = resolvedProjectStore
+
+        let store = conversationStore ?? Self.defaultConversationStore(settingsStore: effectiveSettingsStore)
         self.conversationStore = store
+        Self.configureStoreActiveProject(store, settingsStore: effectiveSettingsStore)
+
         self.conversationsViewModel = conversationsViewModel ?? ConversationsViewModel(store: store)
         self.settingsViewModel = settingsViewModel ?? SettingsViewModel(
             settingsStore: effectiveSettingsStore,
             secretStore: effectiveSecretStore
         )
 
-        let retrieverDBURL = Self.applicationSupportURL(for: "retriever.sqlite")
-        let retriever = ProductionAppRetriever(databaseURL: retrieverDBURL, settingsStore: effectiveSettingsStore)
-        self.materialViewModel = materialViewModel ?? MaterialViewModel(indexable: retriever)
+        let resolvedRetriever = retriever ?? ProductionAppRetriever(
+            directoryURL: appSupportDir,
+            settingsStore: effectiveSettingsStore
+        )
+        self.retriever = resolvedRetriever
 
-        if let ensaioViewModel {
-            self.ensaioViewModel = ensaioViewModel
-        } else {
-            self.ensaioViewModel = Self.makeDefaultEnsaioViewModel(
-                retriever: retriever,
-                lens: lens,
-                settingsStore: effectiveSettingsStore,
-                secretStore: effectiveSecretStore
-            )
-        }
+        let matIndexable = (resolvedRetriever as? (any MaterialIndexable))
+            ?? ProductionAppRetriever(directoryURL: appSupportDir, settingsStore: effectiveSettingsStore)
+        let resolvedMaterialVM = materialViewModel ?? MaterialViewModel(indexable: matIndexable)
+        self.materialViewModel = resolvedMaterialVM
 
-        if let conversationViewModel {
-            self.conversationViewModel = conversationViewModel
-        } else {
-            self.conversationViewModel = Self.makeDefaultConversationViewModel(
-                retriever: retriever,
-                lens: lens,
-                settingsStore: effectiveSettingsStore,
-                secretStore: effectiveSecretStore,
-                store: store
-            )
+        self.ensaioViewModel = ensaioViewModel ?? Self.makeDefaultEnsaioViewModel(
+            retriever: resolvedRetriever,
+            lens: lens,
+            settingsStore: effectiveSettingsStore,
+            secretStore: effectiveSecretStore
+        )
+
+        let resolvedConversationVM = conversationViewModel ?? Self.makeDefaultConversationViewModel(
+            retriever: resolvedRetriever,
+            lens: lens,
+            settingsStore: effectiveSettingsStore,
+            secretStore: effectiveSecretStore,
+            store: store
+        )
+        self.conversationViewModel = resolvedConversationVM
+
+        let pvm = projectsViewModel ?? ProjectsViewModel(
+            projectStore: resolvedProjectStore,
+            settingsStore: effectiveSettingsStore,
+            conversationStore: store,
+            retriever: resolvedRetriever
+        )
+        self.projectsViewModel = pvm
+        Self.bindProjectChanges(pvm: pvm, convVM: resolvedConversationVM, matVM: resolvedMaterialVM, store: store)
+    }
+
+    private static func configureStoreActiveProject(_ store: any ConversationStore, settingsStore: any SettingsStore) {
+        if let sqlStore = store as? SQLiteConversationStore {
+            sqlStore.setActiveProjectIdProvider { settingsStore.load().activeProjectId }
+        } else if let memStore = store as? InMemoryConversationStore {
+            Task {
+                await memStore.setActiveProjectIdProvider { settingsStore.load().activeProjectId }
+            }
         }
     }
 
-    private static func applicationSupportURL(for filename: String) -> URL {
+    private static func bindProjectChanges(
+        pvm: ProjectsViewModel,
+        convVM: ConversationViewModel,
+        matVM: MaterialViewModel,
+        store: any ConversationStore
+    ) {
+        pvm.onProjectChanged = { [weak convVM, weak matVM] newProjectId in
+            guard let convVM, let matVM else { return }
+            Task { @MainActor in
+                await convVM.switchProject(to: newProjectId)
+                if let sqlStore = store as? SQLiteConversationStore {
+                    sqlStore.setActiveProjectIdProvider { newProjectId }
+                }
+                matVM.reloadForActiveProject()
+            }
+        }
+    }
+
+    private static func applicationSupportDirectoryURL() -> URL {
         let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         let appSupportDir = supportDir.appendingPathComponent("Teleprompter", isDirectory: true)
         if !FileManager.default.fileExists(atPath: appSupportDir.path) {
             try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         }
-        return appSupportDir.appendingPathComponent(filename)
+        return appSupportDir
     }
 
-    private static func defaultConversationStore() -> any ConversationStore {
+    private static func applicationSupportURL(for filename: String) -> URL {
+        applicationSupportDirectoryURL().appendingPathComponent(filename)
+    }
+
+    private static func defaultProjectStore() -> any ProjectStore {
+        let dbURL = applicationSupportURL(for: "projects.sqlite")
+        return (try? SQLiteProjectStore(databaseURL: dbURL)) ?? InMemoryProjectStore()
+    }
+
+    private static func defaultConversationStore(settingsStore: any SettingsStore) -> any ConversationStore {
         let dbURL = applicationSupportURL(for: "conversations.sqlite")
-        return (try? SQLiteConversationStore(databaseURL: dbURL)) ?? InMemoryConversationStore()
+        return (try? SQLiteConversationStore(
+            databaseURL: dbURL,
+            activeProjectIdProvider: { settingsStore.load().activeProjectId }
+        )) ?? InMemoryConversationStore()
     }
 
-    /// Ensaio de produção: transcritor real, mesmo índice do chat e LLM só quando configurado.
     private static func makeDefaultEnsaioViewModel(
         retriever: any Retriever,
         lens: SimulatedLens,
@@ -194,110 +196,35 @@ final class AppEnvironment {
         )
     }
 
-    /// Função pura testável que decide e instancia o AnswerGenerator com base nas configurações e segredos.
-    /// Retorna `nil` se não houver chave de API ou se baseURL/modelo não estiverem configurados.
-    static func makeGenerator(
-        settings: Settings,
-        secretStore: any SecretStore
-    ) -> (any AnswerGenerator)? {
-        let provider = settings.llmProvider.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-        switch provider {
-        case "apple":
-            return makeAppleGenerator()
-        case "openrouter":
-            return makeOpenRouterGenerator(settings: settings, secretStore: secretStore)
-        case "custom", "openai", "anthropic":
-            return makeCustomGenerator(settings: settings, secretStore: secretStore, provider: provider)
-        default:
-            return nil
-        }
-    }
-
-    private static func makeAppleGenerator() -> (any AnswerGenerator)? {
-        guard FoundationModelsAnswerGenerator.isSupported else { return nil }
-        return FoundationModelsAnswerGenerator()
-    }
-
-    private static func makeOpenRouterGenerator(
-        settings: Settings,
-        secretStore: any SecretStore
-    ) -> (any AnswerGenerator)? {
-        guard let key = try? secretStore.get(key: SettingsConstants.openRouterApiKeySecretKey),
-              !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let url = URL(string: "https://openrouter.ai/api/v1") else {
-            return nil
-        }
-        let trimmedModel = settings.llmModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        let model = trimmedModel.isEmpty ? "anthropic/claude-haiku-5.5" : trimmedModel
-
-        return StreamingAnswerGenerator(
-            baseURL: url,
-            model: model,
-            secretStore: secretStore,
-            apiKeyKey: SettingsConstants.openRouterApiKeySecretKey,
-            format: .openAI
-        )
-    }
-
-    private static func makeCustomGenerator(
-        settings: Settings,
-        secretStore: any SecretStore,
-        provider: String
-    ) -> (any AnswerGenerator)? {
-        guard let key = try? secretStore.get(key: SettingsConstants.llmApiKeySecretKey),
-              !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return nil
-        }
-        let trimmedBaseURL = settings.llmBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedBaseURL.isEmpty,
-              let url = URL(string: trimmedBaseURL),
-              url.scheme != nil,
-              let host = url.host,
-              !host.isEmpty else {
-            return nil
-        }
-        let trimmedModel = settings.llmModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedModel.isEmpty else {
-            return nil
-        }
-
-        let formatString = provider == "anthropic" ? "anthropic" : (provider == "openai" ? "openai" : settings.llmFormat)
-        let isAnthropic = formatString.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "anthropic"
-        let format: StreamingAnswerGenerator.Format = isAnthropic ? .anthropic : .openAI
-
-        return StreamingAnswerGenerator(
-            baseURL: url,
-            model: trimmedModel,
-            secretStore: secretStore,
-            apiKeyKey: SettingsConstants.llmApiKeySecretKey,
-            format: format
-        )
-    }
-
-    /// Fábrica de produção com componentes reais.
     static func production() -> AppEnvironment {
         AppEnvironment()
     }
 
-    /// Fábrica de preview e testes em memória.
     static func preview() -> AppEnvironment {
         let lens = SimulatedLens()
-        let convStore = InMemoryConversationStore()
-        let settingsStore = InMemorySettingsStore()
+        var initialSettings = Settings.default
+        initialSettings.activeProjectId = "cursos"
+        let settingsStore = InMemorySettingsStore(initial: initialSettings)
         let secretStore = InMemorySecretStore()
-        let retriever = InMemoryAppRetriever()
-        let generator = InMemoryAppGenerator()
-        let transcriber = InMemoryAppTranscriber()
-        let detector = PauseQuestionDetector(silenceThreshold: 1.2)
 
+        let projectStore = InMemoryProjectStore(initialProjects: [
+            Project(id: "cursos", name: "Plataforma de cursos"),
+            Project(id: Project.defaultId, name: "Teleprompter Meta")
+        ])
+
+        let convStore = InMemoryConversationStore(
+            initialConversations: [],
+            activeProjectIdProvider: { settingsStore.load().activeProjectId }
+        )
+
+        let retriever = InMemoryAppRetriever(settingsStore: settingsStore)
         let conversationVM = ConversationViewModel(
             retriever: retriever,
-            generator: generator,
+            generator: InMemoryAppGenerator(),
             formatter: LensFormatter(),
             lens: lens,
-            transcriber: transcriber,
-            detector: detector,
+            transcriber: InMemoryAppTranscriber(),
+            detector: PauseQuestionDetector(silenceThreshold: 1.2),
             format: .bullets,
             settingsStore: settingsStore,
             secretStore: secretStore,
@@ -307,64 +234,35 @@ final class AppEnvironment {
         let settingsVM = SettingsViewModel(settingsStore: settingsStore, secretStore: secretStore)
         let conversationsVM = ConversationsViewModel(store: convStore)
 
+        let projectsVM = ProjectsViewModel(
+            projectStore: projectStore,
+            settingsStore: settingsStore,
+            conversationStore: convStore,
+            retriever: retriever
+        )
+
         return AppEnvironment(
             lens: lens,
             conversationViewModel: conversationVM,
             conversationStore: convStore,
             conversationsViewModel: conversationsVM,
+            projectStore: projectStore,
+            projectsViewModel: projectsVM,
             settingsStore: settingsStore,
             secretStore: secretStore,
             settingsViewModel: settingsVM,
-            materialViewModel: materialVM
+            materialViewModel: materialVM,
+            retriever: retriever
         )
     }
 
-    /// Alias para preview em testes.
     static func test() -> AppEnvironment {
         preview()
     }
 }
 
-// MARK: - InMemory Doubles para o AppEnvironment
+// MARK: - InMemory Doubles
 
-/// Recuperador em memória com dados mockados para o protótipo da sessão.
-struct InMemoryAppRetriever: Retriever, MaterialIndexable, Sendable {
-    func index(_ items: [IndexedChunk]) throws {}
-    func removeSource(_ path: String) throws {}
-
-    func retrieve(_ question: String) async throws -> Retrieval {
-        let lower = question.lowercased()
-
-        if lower.contains("swift") || lower.contains("flutter") {
-            let note = Chunk(
-                text: "• DAT SDK só tem módulos Swift\n• Menor latência de áudio\n• Acesso direto ao SpeechAnalyzer",
-                source: SourceRef(path: "qa/stack.md")
-            )
-            return Retrieval(qaNote: note, chunks: [])
-        }
-
-        if lower.contains("problema") || lower.contains("resolve") {
-            let chunk = Chunk(
-                text: "• Resposta rápida na banca\n• Sem olhar anotações",
-                source: SourceRef(path: "README.md")
-            )
-            return Retrieval(qaNote: nil, chunks: [chunk])
-        }
-
-        if lower.contains("busca") {
-            let chunk = Chunk(
-                text: "Busca híbrida com BM25 e embeddings locais no dispositivo.",
-                source: SourceRef(path: "docs/ADR-0001.md")
-            )
-            return Retrieval(qaNote: nil, chunks: [chunk])
-        }
-
-        // Sem trecho acima do limiar -> US-13
-        return Retrieval(qaNote: nil, chunks: [])
-    }
-}
-
-/// Gerador em memória simulando streaming de tokens.
 final class InMemoryAppGenerator: AnswerGenerator, @unchecked Sendable {
     func generate(question: String, context: [Chunk]) -> AsyncStream<String> {
         let text = context.map(\.text).joined(separator: "\n")
@@ -381,7 +279,6 @@ final class InMemoryAppGenerator: AnswerGenerator, @unchecked Sendable {
     }
 }
 
-/// Transcritor em memória sem microfone real.
 final class InMemoryAppTranscriber: SpeechTranscriber, @unchecked Sendable {
     func transcribe(_ audio: AsyncStream<AudioBuffer>) -> AsyncStream<Transcript> {
         AsyncStream { continuation in

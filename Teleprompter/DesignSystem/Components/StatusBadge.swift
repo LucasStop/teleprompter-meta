@@ -63,6 +63,7 @@ public struct StatusBadge: View {
             Text(displayTitle)
                 .font(Typography.bodySm)
                 .foregroundStyle(Colors.foreground)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, Spacing.s3)
         .padding(.vertical, Spacing.s1)

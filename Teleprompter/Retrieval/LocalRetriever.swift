@@ -3,7 +3,7 @@ import SQLite3
 
 private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-private let portugueseStopWords: Set<String> = [
+let portugueseStopWords: Set<String> = [
     "a", "ao", "aos", "as", "ate", "com", "como", "da", "das", "de", "do", "dos",
     "e", "em", "entre", "era", "essa", "esse", "esta", "estao", "eu", "foi", "foram",
     "isso", "ja", "mais", "mas", "me", "mesmo", "meu", "muito", "na", "nas", "nao",
@@ -29,7 +29,7 @@ enum LocalRetrieverError: Error, LocalizedError, Sendable {
 /// Recuperador local de material sobre SQLite3 com FTS5 e suporte opcional a embeddings.
 /// Segue RAG fechado (ADR-0004 e ADR-0009): prioriza Q&A e devolve vazio se nada atingir o limiar.
 final class LocalRetriever: Retriever, @unchecked Sendable {
-    private let database: OpaquePointer
+    let database: OpaquePointer
     private let writeQueue = DispatchQueue(label: "br.com.lucasstop.teleprompter.retrieval.write")
     private let embedder: (any Embedder)?
 
@@ -257,132 +257,50 @@ final class LocalRetriever: Retriever, @unchecked Sendable {
             return Retrieval(qaNote: nil, chunks: Array(qualifyingChunks))
         }
     }
-}
 
-// MARK: - Consultas Internas e Pontuação
+    // MARK: - Estatísticas e Fontes
 
-extension LocalRetriever {
-    struct ScoredCandidate {
-        let id: Int64
-        let kind: IndexedChunk.Kind
-        let sourcePath: String
-        let text: String
-        let score: Double
-    }
-
-    func fetchLexicalScores(ftsQuery: String, queryTokens: [String]) -> [Int64: Double] {
-        var scores: [Int64: Double] = [:]
-        let sql = "SELECT rowid, -bm25(chunks_fts), search_text FROM chunks_fts WHERE chunks_fts MATCH ?;"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else { return scores }
-        defer { sqlite3_finalize(stmt) }
-
-        sqlite3_bind_text(stmt, 1, ftsQuery, -1, sqliteTransient)
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let rowID = sqlite3_column_int64(stmt, 0)
-            let rawScore = max(0.0, sqlite3_column_double(stmt, 1))
-            let bm25Normalized = rawScore / (rawScore + 1.0)
-
-            var overlapScore = 0.0
-            if !queryTokens.isEmpty, let textCStr = sqlite3_column_text(stmt, 2) {
-                let searchText = String(cString: textCStr)
-                let matchedCount = queryTokens.filter { token in
-                    searchText.localizedCaseInsensitiveContains(token)
-                }.count
-                overlapScore = Double(matchedCount) / Double(queryTokens.count)
-            }
-
-            let finalLexical = max(bm25Normalized, overlapScore * 0.6)
-            scores[rowID] = finalLexical
-        }
-        return scores
-    }
-
-    func fetchAndScoreChunks(
-        kindFilter: String,
-        lexicalScores: [Int64: Double],
-        queryVector: [Float]?
-    ) -> [ScoredCandidate] {
-        var candidates: [ScoredCandidate] = []
-        let sql = "SELECT id, kind, source_path, text, embedding FROM chunks WHERE \(kindFilter);"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else { return candidates }
-        defer { sqlite3_finalize(stmt) }
-
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let rowID = sqlite3_column_int64(stmt, 0)
-            guard let kindStr = sqlite3_column_text(stmt, 1).map({ String(cString: $0) }),
-                  let kind = IndexedChunk.Kind(rawValue: kindStr),
-                  let sourceStr = sqlite3_column_text(stmt, 2).map({ String(cString: $0) }),
-                  let textStr = sqlite3_column_text(stmt, 3).map({ String(cString: $0) }) else {
-                continue
-            }
-
-            let lexicalScore = lexicalScores[rowID] ?? 0.0
-
-            let finalScore: Double
-            if let queryVector {
-                let byteCount = sqlite3_column_bytes(stmt, 4)
-                let semanticScore: Double
-                if byteCount > 0, let blobBytes = sqlite3_column_blob(stmt, 4) {
-                    let floatCount = Int(byteCount) / MemoryLayout<Float>.stride
-                    let chunkVector = blobBytes.bindMemory(to: Float.self, capacity: floatCount)
-                    let vec = Array(UnsafeBufferPointer(start: chunkVector, count: floatCount))
-                    semanticScore = cosineSimilarity(queryVector, vec)
-                } else {
-                    semanticScore = 0.0
+    func stats() -> (filesCount: Int, chunksCount: Int) {
+        writeQueue.sync {
+            var filesCount = 0
+            var chunksCount = 0
+            let sql = "SELECT COUNT(DISTINCT source_path), COUNT(*) FROM chunks;"
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK, let stmt {
+                if sqlite3_step(stmt) == SQLITE_ROW {
+                    filesCount = Int(sqlite3_column_int(stmt, 0))
+                    chunksCount = Int(sqlite3_column_int(stmt, 1))
                 }
-                finalScore = 0.5 * lexicalScore + 0.5 * semanticScore
-            } else {
-                finalScore = lexicalScore
+                sqlite3_finalize(stmt)
             }
-
-            candidates.append(ScoredCandidate(
-                id: rowID,
-                kind: kind,
-                sourcePath: sourceStr,
-                text: textStr,
-                score: finalScore
-            ))
+            return (filesCount, chunksCount)
         }
-
-        return candidates.sorted { $0.score > $1.score }
     }
 
-    func cosineSimilarity(_ lhs: [Float], _ rhs: [Float]) -> Double {
-        guard lhs.count == rhs.count, !lhs.isEmpty else { return 0.0 }
-        var dot: Float = 0
-        var normA: Float = 0
-        var normB: Float = 0
-        for index in lhs.indices {
-            dot += lhs[index] * rhs[index]
-            normA += lhs[index] * lhs[index]
-            normB += rhs[index] * rhs[index]
-        }
-        let denom = sqrt(normA) * sqrt(normB)
-        guard denom > 0 else { return 0.0 }
-        return Double(max(0.0, min(1.0, dot / denom)))
-    }
+    func listSources() -> [MaterialSource] {
+        writeQueue.sync {
+            let sql = "SELECT source_path, kind, COUNT(*) FROM chunks GROUP BY source_path, kind ORDER BY source_path ASC;"
+            var stmt: OpaquePointer?
+            guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return [] }
+            defer { sqlite3_finalize(stmt) }
 
-    func extractTokens(from text: String) -> [String] {
-        let rawTokens = text
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-
-        let contentTokens = rawTokens.filter { token in
-            let normalized = token.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-            return !portugueseStopWords.contains(normalized)
-        }
-
-        return contentTokens.isEmpty ? rawTokens : contentTokens
-    }
-
-    func execute(_ sql: String) throws {
-        var errorMessage: UnsafeMutablePointer<CChar>?
-        if sqlite3_exec(database, sql, nil, nil, &errorMessage) != SQLITE_OK {
-            let message = errorMessage.map { String(cString: $0) } ?? "Erro desconhecido"
-            sqlite3_free(errorMessage)
-            throw LocalRetrieverError.databaseExecutionFailed(message)
+            var sources: [MaterialSource] = []
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                guard let pathStr = sqlite3_column_text(stmt, 0).map({ String(cString: $0) }),
+                      let kindStr = sqlite3_column_text(stmt, 1).map({ String(cString: $0) }),
+                      let kind = IndexedChunk.Kind(rawValue: kindStr) else { continue }
+                let chunkCount = Int(sqlite3_column_int(stmt, 2))
+                let name = URL(fileURLWithPath: pathStr).lastPathComponent
+                let subtitle = kind == .qa ? "\(chunkCount) perguntas" : "Importado"
+                sources.append(MaterialSource(
+                    name: name.isEmpty ? pathStr : name,
+                    path: pathStr,
+                    kind: kind,
+                    chunkCount: chunkCount,
+                    subtitle: subtitle
+                ))
+            }
+            return sources
         }
     }
 }

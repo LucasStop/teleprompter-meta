@@ -7,6 +7,8 @@ struct ChatView: View {
     var lens: Lens
     var initialComposerText: String?
     var onOpenConversations: (() -> Void)?
+    var activeProjectName: String
+    var onOpenProjects: (() -> Void)?
 
     @State private var composerText: String = ""
     @State private var isShowingLens: Bool = false
@@ -15,12 +17,16 @@ struct ChatView: View {
         viewModel: ConversationViewModel,
         lens: Lens,
         initialComposerText: String? = nil,
-        onOpenConversations: (() -> Void)? = nil
+        onOpenConversations: (() -> Void)? = nil,
+        activeProjectName: String = Project.defaultName,
+        onOpenProjects: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.lens = lens
         self.initialComposerText = initialComposerText
         self.onOpenConversations = onOpenConversations
+        self.activeProjectName = activeProjectName
+        self.onOpenProjects = onOpenProjects
     }
 
     private var screenState: ChatScreenState {
@@ -134,7 +140,11 @@ struct ChatView: View {
     }
 
     private var badgeView: some View {
-        HStack {
+        HStack(spacing: Spacing.s2) {
+            ProjectChip(
+                projectName: activeProjectName,
+                action: onOpenProjects
+            )
             StatusBadge(
                 status: screenState.badge.status,
                 title: screenState.badge.title
@@ -177,91 +187,19 @@ struct ChatView: View {
     }
 
     private var emptyPlaceholderView: some View {
-        VStack(spacing: Spacing.s3) {
-            Text("Pergunte sobre o seu material")
-                .font(Typography.h2)
-                .foregroundStyle(Colors.foreground)
-                .multilineTextAlignment(.center)
-
-            Text("Respondo só com o material que você importou. Digite, toque no microfone ou ligue a escuta contínua.")
-                .font(Typography.bodySm)
-                .foregroundStyle(Colors.muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Spacing.s4)
-
-            VStack(spacing: Spacing.s2) {
-                ForEach(screenState.suggestionChips, id: \.self) { chip in
-                    Button(
-                        action: { askQuestion(chip) },
-                        label: {
-                            Text(chip)
-                                .font(Typography.bodySm)
-                                .foregroundStyle(Colors.foreground)
-                                .padding(.horizontal, Spacing.s3)
-                                .padding(.vertical, Spacing.s2)
-                                .frame(minHeight: Spacing.minTouchTarget)
-                                .background(Colors.surface)
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Colors.border, lineWidth: Borders.standard)
-                                )
-                        }
-                    )
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Sugestão de pergunta: \(chip)")
-                }
-            }
-            .padding(.top, Spacing.s2)
-        }
-        .padding(.horizontal, Spacing.s4)
-        .frame(maxWidth: .infinity)
+        ChatEmptyPlaceholderView(
+            screenState: screenState,
+            onAskQuestion: { askQuestion($0) }
+        )
     }
 
     private var composerSectionView: some View {
-        VStack(spacing: Spacing.s2) {
-            HStack {
-                Toggle(isOn: Binding(
-                    get: { viewModel.isListening },
-                    set: { _ in viewModel.toggleListening() }
-                )) {
-                    Text("Escuta contínua")
-                        .font(Typography.bodySm)
-                        .foregroundStyle(Colors.foreground)
-                        .minimumScaleFactor(0.75)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .toggleStyle(SwitchToggleStyle(tint: Colors.primary))
-                .accessibilityLabel("Escuta contínua")
-                .accessibilityHint(viewModel.isListening ? "Desativar escuta contínua" : "Ativar escuta contínua")
-                .frame(minHeight: Spacing.minTouchTarget)
-
-                Spacer()
-
-                Text("Só material importado")
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
-                    .minimumScaleFactor(0.75)
-            }
-            .padding(.horizontal, Spacing.s4)
-
-            ComposerField(
-                text: $composerText,
-                placeholder: screenState.composerPlaceholder,
-                isListening: screenState.isListening,
-                onSend: { sendCurrentText() },
-                onMicTapped: { viewModel.toggleListening() }
-            )
-            .accessibilityIdentifier("chat-composer-field")
-            .padding(.horizontal, Spacing.s4)
-            .padding(.bottom, Spacing.s3)
-        }
-        .background(Colors.surface)
-        .overlay(
-            Rectangle()
-                .frame(height: Borders.standard)
-                .foregroundStyle(Colors.border),
-            alignment: .top
+        ChatComposerSectionView(
+            text: $composerText,
+            isListening: screenState.isListening,
+            placeholder: screenState.composerPlaceholder,
+            onToggleListening: { viewModel.toggleListening() },
+            onSend: { sendCurrentText() }
         )
     }
 

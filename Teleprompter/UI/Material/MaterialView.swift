@@ -5,9 +5,17 @@ import UniformTypeIdentifiers
 /// Apenas renderiza e delega ações para o `MaterialViewModel`.
 struct MaterialView: View {
     @Bindable var viewModel: MaterialViewModel
+    var activeProjectName: String
+    var onOpenProjects: (() -> Void)?
 
-    init(viewModel: MaterialViewModel) {
+    init(
+        viewModel: MaterialViewModel,
+        activeProjectName: String = Project.defaultName,
+        onOpenProjects: (() -> Void)? = nil
+    ) {
         self.viewModel = viewModel
+        self.activeProjectName = activeProjectName
+        self.onOpenProjects = onOpenProjects
     }
 
     var body: some View {
@@ -16,6 +24,10 @@ struct MaterialView: View {
                 headerView
                     .padding(.horizontal, Spacing.s4)
                     .padding(.top, Spacing.s4)
+                    .padding(.bottom, Spacing.s1)
+
+                ProjectLine(projectName: activeProjectName, action: onOpenProjects)
+                    .padding(.horizontal, Spacing.s4)
                     .padding(.bottom, Spacing.s2)
 
                 if let badge = viewModel.screenState.badge {

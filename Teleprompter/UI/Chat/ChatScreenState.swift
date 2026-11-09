@@ -76,6 +76,9 @@ struct ChatScreenState: Equatable, Sendable {
     var isListening: Bool
     var composerPlaceholder: String
     var suggestionChips: [String]
+    var hasMaterial: Bool
+    var emptyPlaceholderTitle: String
+    var emptyPlaceholderSubtitle: String
 
     init(
         kind: Kind,
@@ -85,10 +88,10 @@ struct ChatScreenState: Equatable, Sendable {
         showEmptyPlaceholder: Bool = false,
         isListening: Bool = false,
         composerPlaceholder: String = "Pergunte sobre o seu material",
-        suggestionChips: [String] = [
-            "Qual o problema que o app resolve?",
-            "Como funciona a busca?"
-        ]
+        suggestionChips: [String]? = nil,
+        hasMaterial: Bool = true,
+        emptyPlaceholderTitle: String? = nil,
+        emptyPlaceholderSubtitle: String? = nil
     ) {
         self.kind = kind
         self.badge = badge
@@ -97,7 +100,21 @@ struct ChatScreenState: Equatable, Sendable {
         self.showEmptyPlaceholder = showEmptyPlaceholder
         self.isListening = isListening
         self.composerPlaceholder = composerPlaceholder
-        self.suggestionChips = suggestionChips
+        self.hasMaterial = hasMaterial
+        if hasMaterial {
+            self.suggestionChips = suggestionChips ?? [
+                "Qual o problema que o app resolve?",
+                "Como funciona a busca?"
+            ]
+            self.emptyPlaceholderTitle = emptyPlaceholderTitle ?? "Pergunte sobre o seu projeto"
+            self.emptyPlaceholderSubtitle = emptyPlaceholderSubtitle ??
+                "Respondo só com o material que você importou. Digite, toque no microfone ou ligue a escuta contínua."
+        } else {
+            self.suggestionChips = suggestionChips ?? []
+            self.emptyPlaceholderTitle = emptyPlaceholderTitle ?? "Nenhum material neste projeto"
+            self.emptyPlaceholderSubtitle = emptyPlaceholderSubtitle ??
+                "Cada projeto tem a sua pasta de material e as suas conversas. Depois de criar, importe a pasta na aba Material."
+        }
     }
 }
 
@@ -120,10 +137,21 @@ extension ChatScreenState {
         self.composerPlaceholder = (determinedKind == .escuta) ? "Ouvindo..." : "Pergunte sobre o seu material"
         self.showEmptyPlaceholder = (determinedKind == .vazio || determinedKind == .digitando)
             && viewModel.messages.isEmpty
-        self.suggestionChips = [
-            "Qual o problema que o app resolve?",
-            "Como funciona a busca?"
-        ]
+        self.hasMaterial = viewModel.hasMaterial
+        if !viewModel.hasMaterial {
+            self.emptyPlaceholderTitle = "Nenhum material neste projeto"
+            self.emptyPlaceholderSubtitle =
+                "Cada projeto tem a sua pasta de material e as suas conversas. Depois de criar, importe a pasta na aba Material."
+            self.suggestionChips = []
+        } else {
+            self.emptyPlaceholderTitle = "Pergunte sobre o seu projeto"
+            self.emptyPlaceholderSubtitle =
+                "Respondo só com o material que você importou. Digite, toque no microfone ou ligue a escuta contínua."
+            self.suggestionChips = [
+                "Qual o problema que o app resolve?",
+                "Como funciona a busca?"
+            ]
+        }
         self.messages = Self.makeMessages(for: determinedKind, viewModel: viewModel)
     }
 

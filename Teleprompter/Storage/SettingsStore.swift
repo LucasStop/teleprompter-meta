@@ -87,6 +87,7 @@ struct Settings: Sendable, Codable, Equatable {
     var llmModel: String
     var llmProvider: String
     var llmFormat: String
+    var activeProjectId: String
 
     static let defaultQAThreshold: Double = 0.40
     static let defaultChunkThreshold: Double = 0.25
@@ -111,7 +112,8 @@ struct Settings: Sendable, Codable, Equatable {
         llmBaseURL: "",
         llmModel: "",
         llmProvider: "openrouter",
-        llmFormat: "openai"
+        llmFormat: "openai",
+        activeProjectId: "default"
     )
 
     init(
@@ -127,7 +129,8 @@ struct Settings: Sendable, Codable, Equatable {
         llmBaseURL: String = "",
         llmModel: String = "",
         llmProvider: String = "openrouter",
-        llmFormat: String = "openai"
+        llmFormat: String = "openai",
+        activeProjectId: String = "default"
     ) {
         self.format = format
         self.qaThreshold = qaThreshold
@@ -142,6 +145,7 @@ struct Settings: Sendable, Codable, Equatable {
         self.llmModel = llmModel
         self.llmProvider = llmProvider
         self.llmFormat = llmFormat
+        self.activeProjectId = activeProjectId
     }
 
     enum CodingKeys: String, CodingKey {
@@ -158,6 +162,7 @@ struct Settings: Sendable, Codable, Equatable {
         case llmModel
         case llmProvider
         case llmFormat
+        case activeProjectId
     }
 
     init(from decoder: Decoder) throws {
@@ -173,6 +178,7 @@ struct Settings: Sendable, Codable, Equatable {
         self.appearance = try container.decodeIfPresent(AppearancePreference.self, forKey: .appearance) ?? .system
         self.llmBaseURL = try container.decodeIfPresent(String.self, forKey: .llmBaseURL) ?? ""
         self.llmModel = try container.decodeIfPresent(String.self, forKey: .llmModel) ?? ""
+        self.activeProjectId = try container.decodeIfPresent(String.self, forKey: .activeProjectId) ?? "default"
 
         let decodedFormat = try container
             .decodeIfPresent(String.self, forKey: .llmFormat)?
@@ -213,6 +219,7 @@ struct Settings: Sendable, Codable, Equatable {
         try container.encode(llmModel, forKey: .llmModel)
         try container.encode(llmProvider, forKey: .llmProvider)
         try container.encode(llmFormat, forKey: .llmFormat)
+        try container.encode(activeProjectId, forKey: .activeProjectId)
     }
 
     /// Garante que os limiares estejam dentro de faixas válidas.
