@@ -4,7 +4,7 @@
   --foreground: #1C1B19; --muted: #5F5B54; --border: #DDD8CF;
   --primary: #A8560A; --primary-hover: #8F4906; --primary-foreground: #FFFFFF;
   --success: #1F7A33; --warning: #8A5A00; --danger: #C62828; --info: #0B5FB0;
-  --focus-ring: #A8560A; --disabled: #A9A49B;
+  --focus-ring: #A8560A; --disabled: #A9A49B; --user-bubble: #EFEBE4;
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
   --font: -apple-system, "SF Pro Text", "SF Pro", system-ui, sans-serif;
@@ -15,7 +15,7 @@
   --foreground: #F5F3EE; --muted: #A3A09A; --border: #2C2C30;
   --primary: #F5A524; --primary-hover: #FFB84D; --primary-foreground: #1A1203;
   --success: #3FB950; --warning: #E3B341; --danger: #F85149; --info: #58A6FF;
-  --focus-ring: #FFC857; --disabled: #5A5853;
+  --focus-ring: #FFC857; --disabled: #5A5853; --user-bubble: #232326;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -23,7 +23,7 @@
     --foreground: #F5F3EE; --muted: #A3A09A; --border: #2C2C30;
     --primary: #F5A524; --primary-hover: #FFB84D; --primary-foreground: #1A1203;
     --success: #3FB950; --warning: #E3B341; --danger: #F85149; --info: #58A6FF;
-    --focus-ring: #FFC857; --disabled: #5A5853;
+    --focus-ring: #FFC857; --disabled: #5A5853; --user-bubble: #232326;
   }
 }
 * { box-sizing: border-box; }
