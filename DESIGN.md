@@ -116,6 +116,7 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Selo de estado | ouvindo, transcrevendo, pensando, respondendo, erro, desconectado | sm | todos | idem | componente + visual |
 | Mensagem de chat | pergunta (bolha neutra `user-bubble` à direita, até 80%), resposta (sem bolha, largura cheia, markdown inline, citação numerada inline em `primary`, bloco recolhível "N fontes do seu material" com uma fonte por linha, rodapé de status), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
 | Composer do chat (`ComposerField`) | pílula (raio total, fundo `surface-raised`, borda `border`) com botão redondo de 44 pt: microfone sem texto, enviar em `primary` com texto | md | padrão, digitando, ouvindo, desabilitado | `Teleprompter/DesignSystem/Components/ComposerField.swift` | componente + a11y |
+| Bloco de fontes (`SourcesCard`) | recolhível ("N fontes do seu material"), expandido (uma fonte por linha com índice em `primary` e caminho em mono `muted`) | md | fechado (padrão), aberto | `Teleprompter/DesignSystem/Components/SourcesCard.swift` | componente + visual |
 | Compositor | texto, microfone, escuta contínua | md | vazio, digitando, ouvindo, desabilitado | idem | componente + a11y |
 | Transcrição ao vivo | parcial, final | md | vazio, ativo, erro | idem | componente |
 | Cartão de resposta | bullets, palavras-chave, texto completo | md | carregando (streaming), pronto, erro | idem | visual |
@@ -176,6 +177,7 @@ Nenhuma tela é desenvolvida sem protótipo aprovado. O inventário e o status d
 - Sem referências ainda; adicionar links ou prints que representem o alvo.
 
 ## Histórico
+- 2026-11-09: template de IA no Chat com bolha neutra user-bubble, resposta sem bolha, citação inline, bloco recolhível de fontes SourcesCard e composer em pílula (issue #113).
 - 2026-11-09: adição do seletor e folha de gerenciamento de projetos (ProjectChip, ProjectLine, ProjectsSheetView, issue #105).
 - 2026-11-09: adição dos componentes de autenticação OAuth de provedores (botão de login e linha conectado para OpenRouter em T03, issue #75).
 - 2026-11-08: criação e aprovação do design system.

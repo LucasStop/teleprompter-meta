@@ -52,8 +52,9 @@ struct AnswerPipeline: Sendable {
             text = acc
         }
 
-        let sources = ([found.qaNote] + found.chunks.map(Optional.some)).compactMap { $0?.source }
-        let formattedBody = formatter.format(text, as: format)
+        let sources = deduplicateSources(from: found)
+        let textForLens = CitationParser.stripCitations(text)
+        let formattedBody = formatter.format(textForLens, as: format)
         await lens.show(LensContent(question: question, body: formattedBody, sources: sources))
         let totalDuration = start.duration(to: clock.now())
 
@@ -71,5 +72,16 @@ struct AnswerPipeline: Sendable {
             isNotFound: isNotFound,
             latency: latency
         )
+    }
+
+    private func deduplicateSources(from found: Retrieval) -> [SourceRef] {
+        let rawSources = ([found.qaNote] + found.chunks.map(Optional.some)).compactMap { $0?.source }
+        var uniqueSources: [SourceRef] = []
+        var seenPaths: Set<String> = []
+        for ref in rawSources where !seenPaths.contains(ref.path) {
+            seenPaths.insert(ref.path)
+            uniqueSources.append(ref)
+        }
+        return uniqueSources
     }
 }

@@ -154,36 +154,41 @@ struct ChatView: View {
     }
 
     private var chatAreaView: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                if screenState.showEmptyPlaceholder {
-                    emptyPlaceholderView
-                        .padding(.top, Spacing.s6)
-                } else {
-                    LazyVStack(spacing: Spacing.s3) {
-                        ForEach(screenState.messages) { item in
-                            MessageBubble(
-                                role: item.role,
-                                text: item.text,
-                                bullets: item.bullets,
-                                sources: item.sources,
-                                caption: item.caption
-                            )
-                            .id(item.id)
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if screenState.showEmptyPlaceholder {
+                        emptyPlaceholderView
+                            .padding(.top, Spacing.s6)
+                    } else {
+                        LazyVStack(spacing: Spacing.s3) {
+                            ForEach(screenState.messages) { item in
+                                MessageBubble(
+                                    role: item.role,
+                                    text: item.text,
+                                    bullets: item.bullets,
+                                    sources: item.sources,
+                                    caption: item.caption,
+                                    isSentToLens: item.isSentToLens,
+                                    isSourcesExpanded: item.isSourcesExpanded,
+                                    maxBubbleWidth: geometry.size.width * 0.8
+                                )
+                                .id(item.id)
+                            }
+                        }
+                        .padding(.horizontal, Spacing.s4)
+                        .padding(.vertical, Spacing.s2)
+                    }
+                }
+                // Rola ao perguntar, ao chegar a resposta e a cada trecho do streaming.
+                .onChange(of: screenState.scrollSignature, { _, _ in
+                    if let lastId = screenState.messages.last?.id {
+                        withAnimation {
+                            proxy.scrollTo(lastId, anchor: .bottom)
                         }
                     }
-                    .padding(.horizontal, Spacing.s4)
-                    .padding(.vertical, Spacing.s2)
-                }
+                })
             }
-            // Rola ao perguntar, ao chegar a resposta e a cada trecho do streaming.
-            .onChange(of: screenState.scrollSignature, { _, _ in
-                if let lastId = screenState.messages.last?.id {
-                    withAnimation {
-                        proxy.scrollTo(lastId, anchor: .bottom)
-                    }
-                }
-            })
         }
     }
 

@@ -54,6 +54,17 @@ final class DesignSystemComponentsTests: XCTestCase {
         XCTAssertTrue(clicked)
     }
 
+    func testSourcesCardInitialization() {
+        let singleCard = SourcesCard(sources: ["README.md"])
+        XCTAssertEqual(singleCard.sources, ["README.md"])
+
+        let multipleCard = SourcesCard(
+            sources: ["qa/stack.md", "docs/adr/0001-swift.md"],
+            initiallyExpanded: true
+        )
+        XCTAssertEqual(multipleCard.sources.count, 2)
+    }
+
     func testStatusBadgeAllStatuses() {
         for status in StatusBadge.Status.allCases {
             let badge = StatusBadge(status: status)

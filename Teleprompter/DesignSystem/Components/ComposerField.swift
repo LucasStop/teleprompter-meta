@@ -38,10 +38,10 @@ public struct ComposerField: View {
             .padding(.horizontal, Spacing.s4)
             .padding(.vertical, 10)
             .frame(minHeight: Spacing.minTouchTarget)
-            .background(Colors.background)
-            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .background(Colors.surfaceRaised)
+            .clipShape(Capsule())
             .overlay(
-                RoundedRectangle(cornerRadius: 22)
+                Capsule()
                     .stroke(Colors.border, lineWidth: Borders.standard)
             )
             .accessibilityLabel("Campo de pergunta")

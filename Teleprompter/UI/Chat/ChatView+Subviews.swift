@@ -96,12 +96,6 @@ struct ChatComposerSectionView: View {
             .padding(.horizontal, Spacing.s4)
             .padding(.bottom, Spacing.s3)
         }
-        .background(Colors.surface)
-        .overlay(
-            Rectangle()
-                .frame(height: Borders.standard)
-                .foregroundStyle(Colors.border),
-            alignment: .top
-        )
+        .background(Colors.background)
     }
 }

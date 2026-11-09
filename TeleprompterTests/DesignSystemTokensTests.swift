@@ -28,6 +28,7 @@ final class DesignSystemTokensTests: XCTestCase {
             ColorExpectation(token: .info, lightHex: "#0B5FB0", darkHex: "#58A6FF"),
             ColorExpectation(token: .focusRing, lightHex: "#A8560A", darkHex: "#FFC857"),
             ColorExpectation(token: .disabled, lightHex: "#A9A49B", darkHex: "#5A5853"),
+            ColorExpectation(token: .userBubble, lightHex: "#EFEBE4", darkHex: "#232326"),
         ]
 
         let lightTrait = UITraitCollection(userInterfaceStyle: .light)

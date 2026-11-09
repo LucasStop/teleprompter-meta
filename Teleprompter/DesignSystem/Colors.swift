@@ -18,6 +18,7 @@ public enum SemanticColor: String, CaseIterable, Sendable {
     case info
     case focusRing = "focus-ring"
     case disabled
+    case userBubble = "user-bubble"
 
     public var lightHex: String {
         switch self {
@@ -36,6 +37,7 @@ public enum SemanticColor: String, CaseIterable, Sendable {
         case .info: return "#0B5FB0"
         case .focusRing: return "#A8560A"
         case .disabled: return "#A9A49B"
+        case .userBubble: return "#EFEBE4"
         }
     }
 
@@ -56,6 +58,7 @@ public enum SemanticColor: String, CaseIterable, Sendable {
         case .info: return "#58A6FF"
         case .focusRing: return "#FFC857"
         case .disabled: return "#5A5853"
+        case .userBubble: return "#232326"
         }
     }
 
@@ -84,6 +87,7 @@ public enum Colors {
     public static let info = SemanticColor.info.color
     public static let focusRing = SemanticColor.focusRing.color
     public static let disabled = SemanticColor.disabled.color
+    public static let userBubble = SemanticColor.userBubble.color
 
     public static func uiColor(for token: SemanticColor) -> UIColor {
         token.uiColor

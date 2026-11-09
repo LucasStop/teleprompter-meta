@@ -42,9 +42,7 @@ struct FoundationModelsAnswerGenerator: AnswerGenerator {
                             return
                         }
                         let session = LanguageModelSession(instructions: systemPrompt)
-                        let contextBody = context.map { chunk in
-                            "Fonte: \(chunk.source.path)\n\(chunk.text)"
-                        }.joined(separator: "\n\n")
+                        let contextBody = StreamingAnswerGenerator.formatContextBody(context: context)
                         let userPrompt = "Contexto:\n\(contextBody)\n\nPergunta:\n\(question)"
                         let stream = session.streamResponse(to: Prompt(userPrompt))
                         var previousLength = 0
