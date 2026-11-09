@@ -7,8 +7,8 @@ enum SettingsScreenState: Equatable, Sendable {
     case erro(message: String)
 }
 
-/// ViewModel para a aba Ajustes (T03 Configurações, PRD US-05 e US-07).
-/// Isola validações, regras de negócio e comunicação com `SettingsStore` e `SecretStore`.
+/// ViewModel para a aba Ajustes (T03 Configurações, PRD US-05, US-07 e issue #75).
+/// Isola validações, regras de negócio e comunicação com `SettingsStore`, `SecretStore` e `OpenRouterAuthenticating`.
 @MainActor
 @Observable
 final class SettingsViewModel {
@@ -19,19 +19,30 @@ final class SettingsViewModel {
     private(set) var maskedApiKey: String?
     var apiKeyInput: String
 
+    private(set) var hasSavedOpenRouterApiKey: Bool
+    private(set) var maskedOpenRouterApiKey: String?
+    var isOpenRouterAuthenticating: Bool
+
     private let settingsStore: any SettingsStore
     private let secretStore: any SecretStore
+    private let authService: any OpenRouterAuthenticating
+    private let webAuthSession: (any WebAuthenticationSessionProtocol)?
 
     init(
         settingsStore: any SettingsStore,
         secretStore: any SecretStore,
+        authService: any OpenRouterAuthenticating = OpenRouterAuthService(),
+        webAuthSession: (any WebAuthenticationSessionProtocol)? = nil,
         initialState: SettingsScreenState = .padrao
     ) {
         self.settingsStore = settingsStore
         self.secretStore = secretStore
+        self.authService = authService
+        self.webAuthSession = webAuthSession
         self.settings = settingsStore.load()
         self.state = initialState
         self.apiKeyInput = ""
+        self.isOpenRouterAuthenticating = false
 
         if case let .erro(message) = initialState {
             self.errorMessage = message
@@ -47,10 +58,21 @@ final class SettingsViewModel {
             self.hasSavedApiKey = false
             self.maskedApiKey = nil
         }
+
+        if let existingOR = try? secretStore.get(key: SettingsConstants.openRouterApiKeySecretKey),
+           !existingOR.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            self.hasSavedOpenRouterApiKey = true
+            self.maskedOpenRouterApiKey = Self.maskOpenRouterApiKey(existingOR)
+        } else {
+            self.hasSavedOpenRouterApiKey = false
+            self.maskedOpenRouterApiKey = nil
+        }
     }
+}
 
-    // MARK: - Propriedades de Apresentação e Ajuste
+// MARK: - Propriedades de Apresentação e Ajuste
 
+extension SettingsViewModel {
     var format: AnswerFormat {
         get { settings.format }
         set {
@@ -143,6 +165,14 @@ final class SettingsViewModel {
         }
     }
 
+    var llmFormat: String {
+        get { settings.llmFormat }
+        set {
+            settings.llmFormat = newValue
+            settingsStore.save(settings)
+        }
+    }
+
     var llmBaseURL: String {
         get { settings.llmBaseURL }
         set {
@@ -159,7 +189,57 @@ final class SettingsViewModel {
         }
     }
 
-    // MARK: - Ações de Chave de API (SecretStore)
+    var isAppleSupported: Bool {
+        FoundationModelsAnswerGenerator.isSupported
+    }
+
+    // MARK: - Ações de OpenRouter OAuth PKCE
+
+    func startOpenRouterLogin() async {
+        isOpenRouterAuthenticating = true
+        state = .padrao
+        errorMessage = nil
+        defer { isOpenRouterAuthenticating = false }
+
+        let pkce = authService.generatePKCE()
+        let authURL = authService.makeAuthURL(challenge: pkce.challenge)
+
+        do {
+            let session = webAuthSession ?? SystemWebAuthenticationSession()
+            let callbackURL = try await session.authenticate(
+                url: authURL,
+                callbackURLScheme: "teleprompter"
+            )
+            let code = try authService.extractCode(from: callbackURL)
+            let apiKey = try await authService.exchangeCode(code: code, verifier: pkce.verifier)
+            try secretStore.set(key: SettingsConstants.openRouterApiKeySecretKey, value: apiKey)
+
+            hasSavedOpenRouterApiKey = true
+            maskedOpenRouterApiKey = Self.maskOpenRouterApiKey(apiKey)
+            state = .padrao
+            errorMessage = nil
+        } catch {
+            let msg = "Login cancelado ou recusado. Tente de novo."
+            state = .erro(message: msg)
+            errorMessage = msg
+        }
+    }
+
+    func removeOpenRouterApiKey() {
+        do {
+            try secretStore.delete(key: SettingsConstants.openRouterApiKeySecretKey)
+            hasSavedOpenRouterApiKey = false
+            maskedOpenRouterApiKey = nil
+            state = .padrao
+            errorMessage = nil
+        } catch {
+            let msg = "Não foi possível remover a chave do Keychain."
+            state = .erro(message: msg)
+            errorMessage = msg
+        }
+    }
+
+    // MARK: - Ações de Chave de API Personalizada (SecretStore)
 
     func saveApiKey() {
         let trimmed = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -217,5 +297,15 @@ final class SettingsViewModel {
             return "Chave salva ••••\(suffix)"
         }
         return "Chave salva ••••"
+    }
+
+    static func maskOpenRouterApiKey(_ key: String) -> String {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        if trimmed.count >= 4 {
+            let suffix = String(trimmed.suffix(4))
+            return "Chave no Keychain ••••\(suffix)"
+        }
+        return "Chave no Keychain ••••"
     }
 }

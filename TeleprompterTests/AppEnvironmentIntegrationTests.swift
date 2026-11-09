@@ -49,12 +49,54 @@ final class AppEnvironmentIntegrationTests: XCTestCase {
         XCTAssertEqual(decoded.appearance, .dark)
         XCTAssertEqual(decoded.llmBaseURL, "")
         XCTAssertEqual(decoded.llmModel, "")
-        XCTAssertEqual(decoded.llmProvider, "")
+        XCTAssertEqual(decoded.llmProvider, "openrouter")
+        XCTAssertEqual(decoded.llmFormat, "openai")
     }
 
-    func testMakeGeneratorPureFunction() throws {
+    func testMakeGeneratorAppleBranch() {
         let secretStore = InMemorySecretStore()
         var settings = Settings.default
+        settings.llmProvider = "apple"
+
+        FoundationModelsAnswerGenerator.isSupportedOverride = false
+        defer { FoundationModelsAnswerGenerator.isSupportedOverride = nil }
+        XCTAssertNil(AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore))
+
+        FoundationModelsAnswerGenerator.isSupportedOverride = true
+        let generator = AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore)
+        XCTAssertNotNil(generator)
+        XCTAssertTrue(generator is FoundationModelsAnswerGenerator)
+    }
+
+    func testMakeGeneratorOpenRouterBranch() throws {
+        let secretStore = InMemorySecretStore()
+        var settings = Settings.default
+        settings.llmProvider = "openrouter"
+
+        // Sem chave no Keychain retorna nil
+        XCTAssertNil(AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore))
+
+        // Com chave no Keychain do OpenRouter, usa modelo padrão anthropic/claude-haiku se vazio
+        try secretStore.set(key: SettingsConstants.openRouterApiKeySecretKey, value: "sk-or-v1-testkey")
+        let defaultGen = AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore)
+        XCTAssertNotNil(defaultGen)
+        let streamingDefault = try XCTUnwrap(defaultGen as? StreamingAnswerGenerator)
+        XCTAssertEqual(streamingDefault.baseURL.absoluteString, "https://openrouter.ai/api/v1")
+        XCTAssertEqual(streamingDefault.format, .openAI)
+        XCTAssertEqual(streamingDefault.model, "anthropic/claude-haiku")
+        XCTAssertEqual(streamingDefault.apiKeyKey, SettingsConstants.openRouterApiKeySecretKey)
+
+        // Modelo editável
+        settings.llmModel = "openai/gpt-4o-mini"
+        let customModelGen = AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore)
+        let streamingCustom = try XCTUnwrap(customModelGen as? StreamingAnswerGenerator)
+        XCTAssertEqual(streamingCustom.model, "openai/gpt-4o-mini")
+    }
+
+    func testMakeGeneratorCustomBranch() throws {
+        let secretStore = InMemorySecretStore()
+        var settings = Settings.default
+        settings.llmProvider = "custom"
 
         XCTAssertNil(AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore))
 
@@ -65,13 +107,15 @@ final class AppEnvironmentIntegrationTests: XCTestCase {
         XCTAssertNil(AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore))
 
         settings.llmModel = "gpt-4o-mini"
+        settings.llmFormat = "openai"
         let openAIGen = AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore)
         XCTAssertNotNil(openAIGen)
         let streamingOpenAI = try XCTUnwrap(openAIGen as? StreamingAnswerGenerator)
         XCTAssertEqual(streamingOpenAI.format, .openAI)
         XCTAssertEqual(streamingOpenAI.model, "gpt-4o-mini")
+        XCTAssertEqual(streamingOpenAI.apiKeyKey, SettingsConstants.llmApiKeySecretKey)
 
-        settings.llmProvider = "anthropic"
+        settings.llmFormat = "anthropic"
         settings.llmBaseURL = "https://api.anthropic.com/v1"
         settings.llmModel = "claude-3-5-haiku-20241022"
         let anthropicGen = AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore)

@@ -57,7 +57,7 @@ final class SettingsStoreTests: XCTestCase {
         store.save(Settings.default)
 
         let dictionary = defaults.dictionaryRepresentation()
-        let forbiddenPatterns = ["apiKey", "api_key", "sk-", "secret", "llm.apiKey"]
+        let forbiddenPatterns = ["apiKey", "api_key", "sk-", "secret", "llm.apiKey", "llm.openrouter.apiKey"]
 
         for (key, value) in dictionary {
             for pattern in forbiddenPatterns {
@@ -147,5 +147,83 @@ final class SettingsStoreTests: XCTestCase {
 
         store.resetToDefaults()
         XCTAssertEqual(store.load(), Settings.default)
+    }
+
+    func testMigrationFromLegacyOpenAIProviderToCustom() throws {
+        let legacyJSON = """
+        {
+            "llmProvider": "openai",
+            "llmBaseURL": "https://api.openai.com/v1",
+            "llmModel": "gpt-4o-mini"
+        }
+        """
+        let data = try XCTUnwrap(legacyJSON.data(using: .utf8))
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
+
+        XCTAssertEqual(decoded.llmProvider, "custom")
+        XCTAssertEqual(decoded.llmFormat, "openai")
+        XCTAssertEqual(decoded.llmBaseURL, "https://api.openai.com/v1")
+        XCTAssertEqual(decoded.llmModel, "gpt-4o-mini")
+    }
+
+    func testMigrationFromLegacyAnthropicProviderToCustom() throws {
+        let legacyJSON = """
+        {
+            "llmProvider": "anthropic",
+            "llmBaseURL": "https://api.anthropic.com/v1",
+            "llmModel": "claude-3-5-sonnet-20241022"
+        }
+        """
+        let data = try XCTUnwrap(legacyJSON.data(using: .utf8))
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
+
+        XCTAssertEqual(decoded.llmProvider, "custom")
+        XCTAssertEqual(decoded.llmFormat, "anthropic")
+        XCTAssertEqual(decoded.llmBaseURL, "https://api.anthropic.com/v1")
+        XCTAssertEqual(decoded.llmModel, "claude-3-5-sonnet-20241022")
+    }
+
+    func testDecodeLegacyJSONWithoutProviderDefaultsToOpenRouter() throws {
+        let legacyJSON = """
+        {
+            "format": "bullets"
+        }
+        """
+        let data = try XCTUnwrap(legacyJSON.data(using: .utf8))
+        let decoded = try JSONDecoder().decode(Settings.self, from: data)
+
+        XCTAssertEqual(decoded.llmProvider, "openrouter")
+        XCTAssertEqual(decoded.llmFormat, "openai")
+    }
+
+    func testProviderRoundTripAppleOpenRouterCustom() throws {
+        let providers = ["apple", "openrouter", "custom"]
+        for provider in providers {
+            var settings = Settings.default
+            settings.llmProvider = provider
+            settings.llmFormat = "anthropic"
+
+            let encoded = try JSONEncoder().encode(settings)
+            let decoded = try JSONDecoder().decode(Settings.self, from: encoded)
+
+            XCTAssertEqual(decoded.llmProvider, provider)
+            XCTAssertEqual(decoded.llmFormat, "anthropic")
+        }
+    }
+
+    func testSeparateKeychainKeysDoNotOverwriteEachOther() throws {
+        let secretStore = InMemorySecretStore()
+        let customKey = "sk-custom-12345"
+        let openRouterKey = "sk-or-v1-abcdef"
+
+        try secretStore.set(key: SettingsConstants.llmApiKeySecretKey, value: customKey)
+        try secretStore.set(key: SettingsConstants.openRouterApiKeySecretKey, value: openRouterKey)
+
+        XCTAssertEqual(try secretStore.get(key: SettingsConstants.llmApiKeySecretKey), customKey)
+        XCTAssertEqual(try secretStore.get(key: SettingsConstants.openRouterApiKeySecretKey), openRouterKey)
+
+        try secretStore.delete(key: SettingsConstants.openRouterApiKeySecretKey)
+        XCTAssertEqual(try secretStore.get(key: SettingsConstants.llmApiKeySecretKey), customKey)
+        XCTAssertNil(try secretStore.get(key: SettingsConstants.openRouterApiKeySecretKey))
     }
 }

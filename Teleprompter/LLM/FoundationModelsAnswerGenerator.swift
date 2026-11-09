@@ -16,7 +16,12 @@ struct FoundationModelsAnswerGenerator: AnswerGenerator {
         self.systemPrompt = systemPrompt
     }
 
+    nonisolated(unsafe) static var isSupportedOverride: Bool?
+
     static var isSupported: Bool {
+        if let isSupportedOverride {
+            return isSupportedOverride
+        }
         #if canImport(FoundationModels)
         if #available(iOS 26, *) {
             return SystemLanguageModel.default.availability == .available

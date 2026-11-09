@@ -14,6 +14,13 @@ targets:
     type: application
     platform: iOS
     sources: [Teleprompter]
+    info:
+      path: Teleprompter/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: br.com.lucasstop.teleprompter
+            CFBundleURLSchemes:
+              - teleprompter
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.lucasstop.teleprompter
