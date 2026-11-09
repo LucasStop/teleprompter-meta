@@ -222,7 +222,7 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
         try await runOnQueue { try self.performDeleteAll() }
     }
 
-    private func runOnQueue<T>(_ block: @escaping () throws -> T) async throws -> T {
+    private func runOnQueue<T: Sendable>(_ block: @escaping @Sendable () throws -> T) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
