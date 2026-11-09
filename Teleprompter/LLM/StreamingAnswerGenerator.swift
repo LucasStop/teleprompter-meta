@@ -1,6 +1,11 @@
 import Foundation
 
 struct StreamingAnswerGenerator: AnswerGenerator {
+    enum Format: String, Sendable, Equatable, CaseIterable {
+        case openAI
+        case anthropic
+    }
+
     static let defaultSystemPrompt = """
     Você é o assistente do Teleprompter. Responda exclusivamente com base nos trechos fornecidos no contexto.
     Responda de forma curta e em tópicos.
@@ -11,6 +16,8 @@ struct StreamingAnswerGenerator: AnswerGenerator {
     let model: String
     let secretStore: SecretStore
     let apiKeyKey: String
+    let format: Format
+    let maxTokens: Int
     let timeout: TimeInterval
     let session: URLSession
     let systemPrompt: String
@@ -21,6 +28,8 @@ struct StreamingAnswerGenerator: AnswerGenerator {
         model: String,
         secretStore: SecretStore,
         apiKeyKey: String = "llm_api_key",
+        format: Format = .openAI,
+        maxTokens: Int = 1024,
         timeout: TimeInterval = 30,
         session: URLSession = .shared,
         systemPrompt: String = Self.defaultSystemPrompt,
@@ -30,6 +39,8 @@ struct StreamingAnswerGenerator: AnswerGenerator {
         self.model = model
         self.secretStore = secretStore
         self.apiKeyKey = apiKeyKey
+        self.format = format
+        self.maxTokens = maxTokens
         self.timeout = timeout
         self.session = session
         self.systemPrompt = systemPrompt
@@ -91,12 +102,24 @@ struct StreamingAnswerGenerator: AnswerGenerator {
             }
         }
     }
+}
 
+// MARK: - Pipeline de Requisição e Eventos
+
+extension StreamingAnswerGenerator {
     private var endpointURL: URL {
-        if baseURL.lastPathComponent == "completions" {
-            return baseURL
+        switch format {
+        case .openAI:
+            if baseURL.lastPathComponent == "completions" {
+                return baseURL
+            }
+            return baseURL.appendingPathComponent("chat/completions")
+        case .anthropic:
+            if baseURL.lastPathComponent == "messages" {
+                return baseURL
+            }
+            return baseURL.appendingPathComponent("messages")
         }
-        return baseURL.appendingPathComponent("chat/completions")
     }
 
     private func streamDeltas(
@@ -158,28 +181,6 @@ struct StreamingAnswerGenerator: AnswerGenerator {
         }
     }
 
-    private struct ParsedDelta {
-        let text: String?
-        let isDone: Bool
-    }
-
-    private func parseSSELine(_ rawLine: String) throws -> ParsedDelta? {
-        let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-        if line.isEmpty || line.hasPrefix(":") || !line.hasPrefix("data:") {
-            return nil
-        }
-        let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
-        if payload == "[DONE]" {
-            return ParsedDelta(text: nil, isDone: true)
-        }
-        guard let data = payload.data(using: .utf8),
-              let chunk = try? JSONDecoder().decode(ChatCompletionChunk.self, from: data) else {
-            throw LLMError.invalidResponse
-        }
-        let piece = chunk.choices?.compactMap(\.delta?.content).first(where: { !$0.isEmpty })
-        return ParsedDelta(text: piece, isDone: false)
-    }
-
     private func fetchAPIKey() throws -> String {
         let key: String?
         do {
@@ -193,38 +194,117 @@ struct StreamingAnswerGenerator: AnswerGenerator {
         return key
     }
 
+    private func sanitize(_ text: String, apiKey: String) -> String {
+        guard !apiKey.isEmpty else { return text }
+        return text.replacingOccurrences(of: apiKey, with: "[REDACTED]")
+    }
+}
+
+// MARK: - Construção de Requisições
+
+extension StreamingAnswerGenerator {
     private func makeRequest(question: String, context: [Chunk], apiKey: String) throws -> URLRequest {
         var request = URLRequest(url: endpointURL)
         request.httpMethod = "POST"
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
         let contextBody = context.map { chunk in
             "Fonte: \(chunk.source.path)\n\(chunk.text)"
         }.joined(separator: "\n\n")
 
         let userPrompt = "Contexto:\n\(contextBody)\n\nPergunta:\n\(question)"
-        let body = ChatCompletionRequestBody(
-            model: model,
-            messages: [
-                ChatCompletionMessage(role: "system", content: systemPrompt),
-                ChatCompletionMessage(role: "user", content: userPrompt)
-            ],
-            stream: true
-        )
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
-        request.httpBody = try encoder.encode(body)
+
+        switch format {
+        case .openAI:
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            let body = ChatCompletionRequestBody(
+                model: model,
+                messages: [
+                    ChatCompletionMessage(role: "system", content: systemPrompt),
+                    ChatCompletionMessage(role: "user", content: userPrompt)
+                ],
+                stream: true
+            )
+            request.httpBody = try encoder.encode(body)
+
+        case .anthropic:
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+            let body = AnthropicRequestBody(
+                model: model,
+                maxTokens: maxTokens,
+                system: systemPrompt,
+                messages: [
+                    AnthropicMessage(role: "user", content: userPrompt)
+                ],
+                stream: true
+            )
+            request.httpBody = try encoder.encode(body)
+        }
+
         return request
     }
+}
 
-    private func sanitize(_ text: String, apiKey: String) -> String {
-        guard !apiKey.isEmpty else { return text }
-        return text.replacingOccurrences(of: apiKey, with: "[REDACTED]")
+// MARK: - Parsing de SSE
+
+extension StreamingAnswerGenerator {
+    private struct ParsedDelta {
+        let text: String?
+        let isDone: Bool
+    }
+
+    private func parseSSELine(_ rawLine: String) throws -> ParsedDelta? {
+        let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        if line.isEmpty || line.hasPrefix(":") || !line.hasPrefix("data:") {
+            return nil
+        }
+        let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+
+        switch format {
+        case .openAI:
+            return try parseOpenAIPayload(payload)
+        case .anthropic:
+            return try parseAnthropicPayload(payload)
+        }
+    }
+
+    private func parseOpenAIPayload(_ payload: String) throws -> ParsedDelta? {
+        if payload == "[DONE]" {
+            return ParsedDelta(text: nil, isDone: true)
+        }
+        guard let data = payload.data(using: .utf8),
+              let chunk = try? JSONDecoder().decode(ChatCompletionChunk.self, from: data) else {
+            throw LLMError.invalidResponse
+        }
+        let piece = chunk.choices?.compactMap(\.delta?.content).first(where: { !$0.isEmpty })
+        return ParsedDelta(text: piece, isDone: false)
+    }
+
+    private func parseAnthropicPayload(_ payload: String) throws -> ParsedDelta? {
+        guard let data = payload.data(using: .utf8),
+              let chunk = try? JSONDecoder().decode(AnthropicChunk.self, from: data) else {
+            throw LLMError.invalidResponse
+        }
+        switch chunk.type {
+        case "content_block_delta":
+            let piece = chunk.delta?.text
+            return ParsedDelta(text: (piece?.isEmpty ?? true) ? nil : piece, isDone: false)
+        case "message_stop":
+            return ParsedDelta(text: nil, isDone: true)
+        case "error":
+            throw LLMError.network(chunk.error?.message ?? "Erro na resposta do Anthropic")
+        default:
+            return ParsedDelta(text: nil, isDone: false)
+        }
     }
 }
+
+// MARK: - Modelos de Requisição e Resposta OpenAI
 
 private struct ChatCompletionMessage: Encodable {
     let role: String
@@ -247,4 +327,43 @@ private struct ChatCompletionChoice: Decodable {
 
 private struct ChatCompletionChunk: Decodable {
     let choices: [ChatCompletionChoice]?
+}
+
+// MARK: - Modelos de Requisição e Resposta Anthropic
+
+private struct AnthropicRequestBody: Encodable {
+    let model: String
+    let maxTokens: Int
+    let system: String
+    let messages: [AnthropicMessage]
+    let stream: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case maxTokens = "max_tokens"
+        case system
+        case messages
+        case stream
+    }
+}
+
+private struct AnthropicMessage: Encodable {
+    let role: String
+    let content: String
+}
+
+private struct AnthropicChunk: Decodable {
+    let type: String
+    let delta: AnthropicDelta?
+    let error: AnthropicErrorPayload?
+}
+
+private struct AnthropicDelta: Decodable {
+    let type: String?
+    let text: String?
+}
+
+private struct AnthropicErrorPayload: Decodable {
+    let type: String?
+    let message: String?
 }
