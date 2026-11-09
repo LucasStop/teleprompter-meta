@@ -28,7 +28,7 @@ Perfil: monolito · Stack: Swift (SwiftUI, XcodeGen) (ver `.projeto.yml`)
 - Instalar: `brew install xcodegen swiftlint && xcodegen generate`
 - Dev: `xcodebuild -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' build`
 - Build: `xcodebuild -scheme Teleprompter -configuration Release build`
-- Testes: `xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'` · E2E: `xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'`
+- Testes: `xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'` (unitários e UI) · E2E de fluxo: `maestro test .maestro/` (local)
 - Lint/typecheck: `swiftlint --strict`
 
 ## Convenções
@@ -42,7 +42,7 @@ Perfil: monolito · Stack: Swift (SwiftUI, XcodeGen) (ver `.projeto.yml`)
 
 ## Notas do projeto
 - Chave do provedor de LLM no Keychain, nunca no repo (ADR-005 a decidir). DAT SDK em developer preview: checar mudanças antes de atualizar.
-- Estrutura real: `Teleprompter/`, `TeleprompterTests/`, `TeleprompterUITests/` (ainda não criados; fase 1).
+- Estrutura real: `Teleprompter/`, `TeleprompterTests/`, `TeleprompterUITests/`.
 
 ## Orquestração com agy
 - Trabalho pesado (testes, código, build, correção de erro) vai para `agy` (`gemini-3.8-flash-high`) via `tools/agy-run.sh`, em worktree isolado, com brief em `docs/agentes/`. Até 2 workers em paralelo.

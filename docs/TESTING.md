@@ -68,8 +68,8 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 ## 6. Comandos
 
 ```bash
-xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'    # unitário + componente + integração
-xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'     # XCUITest: smoke e acessibilidade (CI)
+xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'    # unitário + componente + integração + smoke/UI (CI)
+xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterUITests     # XCUITest isolado: smoke e acessibilidade
 maestro test .maestro/    # fluxo de telas contra os protótipos aprovados (local, antes de cada gate)
 swiftlint --strict    # estático
 
