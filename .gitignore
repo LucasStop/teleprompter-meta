@@ -33,3 +33,4 @@ build.noindex/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+*.xcodeproj

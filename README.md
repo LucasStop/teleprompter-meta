@@ -23,12 +23,12 @@ Perfil: monolito · Stack: Swift (SwiftUI, XcodeGen)
 ```bash
 brew install xcodegen swiftlint && xcodegen generate
 cp .env.example .env   # preencher valores; nunca commitar .env
-xcodebuild -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 16' build
+xcodebuild -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
 ## Testes
 ```bash
-xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 16'
+xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'
 swiftlint --strict
 ```
 Detalhes em [docs/TESTING.md](docs/TESTING.md).

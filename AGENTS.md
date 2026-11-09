@@ -26,9 +26,9 @@ Perfil: monolito · Stack: Swift (SwiftUI, XcodeGen) (ver `.projeto.yml`)
 
 ## Comandos
 - Instalar: `brew install xcodegen swiftlint && xcodegen generate`
-- Dev: `xcodebuild -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 16' build`
+- Dev: `xcodebuild -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' build`
 - Build: `xcodebuild -scheme Teleprompter -configuration Release build`
-- Testes: `xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 16'` · E2E: `xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 16'`
+- Testes: `xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'` · E2E: `xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'`
 - Lint/typecheck: `swiftlint --strict`
 
 ## Convenções

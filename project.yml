@@ -1,0 +1,38 @@
+name: Teleprompter
+options:
+  bundleIdPrefix: br.com.lucasstop
+  deploymentTarget:
+    iOS: "17.2"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GENERATE_INFOPLIST_FILE: YES
+targets:
+  Teleprompter:
+    type: application
+    platform: iOS
+    sources: [Teleprompter]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.lucasstop.teleprompter
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+  TeleprompterTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [TeleprompterTests]
+    dependencies:
+      - target: Teleprompter
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.lucasstop.teleprompter.tests
+schemes:
+  Teleprompter:
+    build:
+      targets:
+        Teleprompter: all
+        TeleprompterTests: [test]
+    test:
+      targets: [TeleprompterTests]
