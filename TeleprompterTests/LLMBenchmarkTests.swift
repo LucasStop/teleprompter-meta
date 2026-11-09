@@ -3,6 +3,8 @@ import XCTest
 @testable import Teleprompter
 
 final class LLMBenchmarkTests: XCTestCase {
+    private let lastError = ErrorBox()
+
     private var tempDirectory: URL!
     private var databaseURL: URL!
 
@@ -119,7 +121,8 @@ final class LLMBenchmarkTests: XCTestCase {
             model: model,
             secretStore: secretStore,
             apiKeyKey: "api_key",
-            format: format
+            format: format,
+            onError: { [lastError] error in lastError.set(error.localizedDescription) }
         )
     }
 
@@ -159,6 +162,7 @@ final class LLMBenchmarkTests: XCTestCase {
             let start = clock.now
             var firstTokenInstant: ContinuousClock.Instant?
             var collected = ""
+            lastError.set(nil)
 
             let stream = generator.generate(question: questionText, context: context)
             for await delta in stream {
@@ -180,13 +184,18 @@ final class LLMBenchmarkTests: XCTestCase {
                 ttftMs = Double(fSec) * 1000.0 + Double(fAtto) / 1_000_000_000_000_000.0
             }
 
+            let failure = lastError.get()
+            if let failure {
+                print("[ERRO] \(profileName) #\(index + 1): \(failure)")
+            }
+
             results.append(QuestionResult(
                 index: index + 1,
                 question: questionText,
                 ttftMs: ttftMs,
                 totalMs: totalMs,
                 response: collected,
-                hadError: false
+                hadError: failure != nil
             ))
         }
 
@@ -267,6 +276,13 @@ final class LLMBenchmarkTests: XCTestCase {
 }
 
 // MARK: - Tipos de Apoio ao Benchmark
+
+private final class ErrorBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: String?
+    func set(_ newValue: String?) { lock.lock(); value = newValue; lock.unlock() }
+    func get() -> String? { lock.lock(); defer { lock.unlock() }; return value }
+}
 
 private struct QuestionResult: Sendable {
     let index: Int

@@ -3,14 +3,18 @@
 # As chaves vêm do ambiente de quem roda; o script nunca as imprime.
 #
 # Uso (no seu terminal):
-#   export OPENROUTER_API_KEY=...   # opcional: perfis via OpenRouter
+#   OPENROUTER_API_KEY=... no .env da raiz ou exportado  # opcional: perfis via OpenRouter
 #   export GROQ_API_KEY=...         # opcional: Groq direto
 #   export ANTHROPIC_API_KEY=...    # opcional: Anthropic direto
 #   export OPENAI_API_KEY=...       # opcional: OpenAI direto
 #   tools/llm-bench.sh [UDID]
-# Modelos sobrescrevíveis: OR_HAIKU_MODEL, OR_OPENAI_MODEL, GROQ_MODEL, ANTHROPIC_MODEL, OPENAI_MODEL.
+# Modelos sobrescrevíveis: OR_HAIKU_MODEL, OR_GEMINI_MODEL, OR_DEEPSEEK_MODEL, OR_OPENAI_MODEL, GROQ_MODEL, ANTHROPIC_MODEL, OPENAI_MODEL.
 # Confira os ids no catálogo de cada provedor antes de rodar.
 set -euo pipefail
+
+# Carrega o .env da raiz (ignorado pelo git) sem imprimir nada dele.
+cd "$(dirname "$0")/.."
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
 
 UDID="${1:-$(xcrun devicectl list devices 2>/dev/null | awk '/physical/ && /connected/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-[0-9A-F]{16}$/) print $i}' | head -1)}"
 TEAM="${DEVELOPMENT_TEAM:-69D4S5TF8S}"
@@ -28,6 +32,8 @@ add() { # perfil, chave, url, modelo, formato
 
 if [ -n "${OPENROUTER_API_KEY:-}" ]; then
   add or-haiku "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_HAIKU_MODEL:-anthropic/claude-haiku-5.5}" openai
+  add or-gemini "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_GEMINI_MODEL:-google/gemini-3.1-flash-lite}" openai
+  add or-deepseek "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_DEEPSEEK_MODEL:-deepseek/deepseek-v4-flash}" openai
   add or-openai "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_OPENAI_MODEL:-openai/gpt-5-mini}" openai
 fi
 [ -n "${GROQ_API_KEY:-}" ] && add groq "$GROQ_API_KEY" https://api.groq.com/openai/v1 "${GROQ_MODEL:-llama-3.3-70b-versatile}" openai
@@ -44,5 +50,5 @@ xcodebuild test -scheme Teleprompter -destination "id=$UDID" \
   DEVELOPMENT_TEAM="$TEAM" -allowProvisioningUpdates > "$log" 2>&1 || true
 
 # Só as tabelas e avisos do teste; nada de ambiente.
-grep -E '^\||^###|\[AVISO\]|error:|Test Case .*(passed|failed|skipped)' "$log" || tail -20 "$log"
+grep -E '^\||^###|\[AVISO\]|\[ERRO\]|error:|Test Case .*(passed|failed|skipped)' "$log" || tail -20 "$log"
 echo "log completo: $log"
