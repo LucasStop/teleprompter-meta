@@ -24,6 +24,7 @@ struct ConversationItemState: Identifiable, Sendable, Equatable {
         if calendar.isDate(date, inSameDayAs: now) {
             let formatter = DateFormatter()
             formatter.calendar = calendar
+            formatter.timeZone = calendar.timeZone
             formatter.dateFormat = "HH:mm"
             return "Hoje, \(formatter.string(from: date))"
         }
@@ -35,6 +36,7 @@ struct ConversationItemState: Identifiable, Sendable, Equatable {
 
         let formatter = DateFormatter()
         formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
         formatter.locale = Locale(identifier: "pt_BR")
         formatter.dateFormat = "d MMM"
         let string = formatter.string(from: date).replacingOccurrences(of: ".", with: "")
