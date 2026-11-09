@@ -76,14 +76,14 @@ final class AppEnvironmentIntegrationTests: XCTestCase {
         // Sem chave no Keychain retorna nil
         XCTAssertNil(AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore))
 
-        // Com chave no Keychain do OpenRouter, usa modelo padrão anthropic/claude-haiku se vazio
+        // Com chave no Keychain do OpenRouter, usa modelo padrão anthropic/claude-haiku-5.5 se vazio
         try secretStore.set(key: SettingsConstants.openRouterApiKeySecretKey, value: "sk-or-v1-testkey")
         let defaultGen = AppEnvironment.makeGenerator(settings: settings, secretStore: secretStore)
         XCTAssertNotNil(defaultGen)
         let streamingDefault = try XCTUnwrap(defaultGen as? StreamingAnswerGenerator)
         XCTAssertEqual(streamingDefault.baseURL.absoluteString, "https://openrouter.ai/api/v1")
         XCTAssertEqual(streamingDefault.format, .openAI)
-        XCTAssertEqual(streamingDefault.model, "anthropic/claude-haiku")
+        XCTAssertEqual(streamingDefault.model, "anthropic/claude-haiku-5.5")
         XCTAssertEqual(streamingDefault.apiKeyKey, SettingsConstants.openRouterApiKeySecretKey)
 
         // Modelo editável

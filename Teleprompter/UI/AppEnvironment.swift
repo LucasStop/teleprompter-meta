@@ -229,7 +229,7 @@ final class AppEnvironment {
             return nil
         }
         let trimmedModel = settings.llmModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        let model = trimmedModel.isEmpty ? "anthropic/claude-haiku" : trimmedModel
+        let model = trimmedModel.isEmpty ? "anthropic/claude-haiku-5.5" : trimmedModel
 
         return StreamingAnswerGenerator(
             baseURL: url,
