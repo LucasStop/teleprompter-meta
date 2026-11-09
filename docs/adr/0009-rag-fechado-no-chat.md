@@ -11,6 +11,8 @@ O LLM só recebe trechos recuperados do material importado. Sem trecho acima do 
 
 Ajuste de 2026-11-09 (issue #90): o prompt do LLM manda responder com o que os trechos dizem, mesmo que parcialmente, e recusar com "Não encontrei isso no seu material" só quando nenhum trecho tiver relação. O benchmark mostrou o Haiku recusando perguntas cujo trecho estava no contexto com a regra anterior (recusar sempre que "não forem suficientes"). A regra de não usar conhecimento externo continua.
 
+Ajuste de 2026-11-09 (issue #113): citação numerada no prompt do LLM (`[n]` ao fim de cada tópico). O contexto é numerado pela mesma ordem de caminho único das fontes (`[1] Fonte: path`, trechos do mesmo arquivo sob o mesmo número). Na lente, marcadores `[n]` são sempre removidos antes de `Lens.show`. No Chat do iPhone, marcadores válidos viram número sobrescrito no token `primary` e marcadores fora do intervalo de fontes são descartados. Respostas pelo caminho rápido de Q&A (sem LLM) não recebem marcador.
+
 ## Alternativas consideradas
 - Resposta com conhecimento geral marcada como "fora do material": mais útil, menos confiável na banca.
 

@@ -48,6 +48,8 @@ struct ChatScreenState: Equatable, Sendable {
         var sources: [String]
         var caption: String?
         var isPartial: Bool
+        var isSentToLens: Bool
+        var isSourcesExpanded: Bool
 
         init(
             id: String = UUID().uuidString,
@@ -56,7 +58,9 @@ struct ChatScreenState: Equatable, Sendable {
             bullets: [String] = [],
             sources: [String] = [],
             caption: String? = nil,
-            isPartial: Bool = false
+            isPartial: Bool = false,
+            isSentToLens: Bool = true,
+            isSourcesExpanded: Bool = false
         ) {
             self.id = id
             self.role = role
@@ -65,6 +69,8 @@ struct ChatScreenState: Equatable, Sendable {
             self.sources = sources
             self.caption = caption
             self.isPartial = isPartial
+            self.isSentToLens = isSentToLens
+            self.isSourcesExpanded = isSourcesExpanded
         }
     }
 
@@ -248,7 +254,7 @@ extension ChatScreenState {
 
         for msg in viewModel.messages {
             items.append(MessageItem(role: .question, text: msg.question))
-            items.append(makeAnswerItem(for: msg))
+            items.append(makeAnswerItem(for: msg, isGlassesConnected: viewModel.isGlassesConnected))
         }
 
         if kind == .pensando {
@@ -259,7 +265,8 @@ extension ChatScreenState {
                 MessageItem(
                     role: .answer,
                     text: "Buscando no material...",
-                    caption: "Buscando resposta"
+                    caption: "Buscando resposta",
+                    isSentToLens: false
                 )
             )
         }
@@ -278,25 +285,33 @@ extension ChatScreenState {
         return items
     }
 
-    private static func makeAnswerItem(for msg: ChatMessage) -> MessageItem {
+    private static func makeAnswerItem(for msg: ChatMessage, isGlassesConnected: Bool) -> MessageItem {
         if msg.answer == AnswerPipeline.notFoundMessage {
             return MessageItem(
                 role: .answer,
                 text: AnswerPipeline.notFoundMessage,
                 bullets: ["Importe uma nota ou documento sobre o assunto, ou reformule a pergunta."],
                 sources: [],
-                caption: "Nada acima do limiar de similaridade"
+                caption: "Nada acima do limiar de similaridade",
+                isSentToLens: false
             )
         }
 
         let (intro, bullets) = parseBullets(from: msg.answer)
         let caption = formatCaption(sources: msg.sources, latency: msg.latency)
+        let uniqueSources = msg.sources.map(\.path).reduce(into: [String]()) { paths, path in
+            if !paths.contains(path) {
+                paths.append(path)
+            }
+        }
         return MessageItem(
             role: .answer,
             text: intro,
             bullets: bullets,
-            sources: msg.sources.map(\.path),
-            caption: caption
+            sources: uniqueSources,
+            caption: caption,
+            isSentToLens: isGlassesConnected,
+            isSourcesExpanded: msg.isSourcesExpanded
         )
     }
 

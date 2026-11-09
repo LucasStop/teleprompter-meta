@@ -272,6 +272,37 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
         XCTAssertFalse(request.url?.absoluteString.contains(key) ?? false)
     }
 
+    func testMakeRequestNumbersContextByUniqueSourcePath() throws {
+        let key = "test-api-key"
+        let store = InMemorySecretStore(initial: ["llm_api_key": key])
+        let gen = StreamingAnswerGenerator(baseURL: baseURL, model: model, secretStore: store)
+
+        let testChunks = [
+            Chunk(text: "DAT SDK só tem módulos Swift.", source: SourceRef(path: "qa/stack.md")),
+            Chunk(text: "Swift 6 traz concorrência.", source: SourceRef(path: "docs/adr/0001-swift.md")),
+            Chunk(text: "Menor latência de áudio.", source: SourceRef(path: "qa/stack.md"))
+        ]
+
+        let request = try gen.makeRequest(question: "Por que Swift?", context: testChunks, apiKey: key)
+        guard let bodyData = request.httpBody,
+              let body = String(data: bodyData, encoding: .utf8) else {
+            XCTFail("Requisição não gerou body")
+            return
+        }
+
+        // Trechos do mesmo arquivo (qa/stack.md) devem estar sob o mesmo número [1]
+        XCTAssertTrue(body.contains("[1] Fonte: qa/stack.md\\nDAT SDK só tem módulos Swift."))
+        XCTAssertTrue(body.contains("[1] Fonte: qa/stack.md\\nMenor latência de áudio."))
+
+        // Novo arquivo recebe número [2]
+        XCTAssertTrue(body.contains("[2] Fonte: docs/adr/0001-swift.md\\nSwift 6 traz concorrência."))
+
+        // Ordem dos números coincide com ordem das fontes únicas
+        let range1 = body.range(of: "[1] Fonte: qa/stack.md")!
+        let range2 = body.range(of: "[2] Fonte: docs/adr/0001-swift.md")!
+        XCTAssertTrue(range1.lowerBound < range2.lowerBound)
+    }
+
     func testErrorsDoNotLeakKeyOrQuestion() {
         let key = "super-secret-api-key-xyz"
         let question = "Pergunta confidencial"
@@ -314,6 +345,9 @@ final class DefaultSystemPromptTests: XCTestCase {
         XCTAssertTrue(prompt.contains("mesmo que parcialmente"))
         XCTAssertTrue(prompt.contains("nunca use conhecimento externo"))
         XCTAssertTrue(prompt.contains(AnswerPipeline.notFoundMessage))
+        XCTAssertTrue(prompt.contains("[n]"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("ao fim de cada tópico"))
+        XCTAssertTrue(prompt.contains("números do contexto"))
         XCTAssertEqual(FoundationModelsAnswerGenerator.defaultSystemPrompt, prompt)
     }
 }

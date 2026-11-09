@@ -10,6 +10,7 @@ struct StreamingAnswerGenerator: AnswerGenerator {
     Você é o assistente do Teleprompter. Responda exclusivamente com base nos trechos fornecidos no contexto;
     nunca use conhecimento externo nem invente.
     Responda de forma curta e em tópicos.
+    Ao fim de cada tópico, indique a citação [n] usando apenas os números do contexto.
     Se os trechos trazem informação que responde à pergunta, mesmo que parcialmente, responda com o que eles dizem e indique o que faltou.
     Só se nenhum trecho tiver relação com a pergunta, responda exatamente: "Não encontrei isso no seu material."
     """
@@ -205,16 +206,31 @@ extension StreamingAnswerGenerator {
 // MARK: - Construção de Requisições
 
 extension StreamingAnswerGenerator {
-    private func makeRequest(question: String, context: [Chunk], apiKey: String) throws -> URLRequest {
+    static func formatContextBody(context: [Chunk]) -> String {
+        var uniquePaths: [String] = []
+        var pathToIndex: [String: Int] = [:]
+        for chunk in context {
+            let path = chunk.source.path
+            if pathToIndex[path] == nil {
+                uniquePaths.append(path)
+                pathToIndex[path] = uniquePaths.count
+            }
+        }
+
+        return context.map { chunk in
+            let number = pathToIndex[chunk.source.path] ?? 1
+            return "[\(number)] Fonte: \(chunk.source.path)\n\(chunk.text)"
+        }.joined(separator: "\n\n")
+    }
+
+    func makeRequest(question: String, context: [Chunk], apiKey: String) throws -> URLRequest {
         var request = URLRequest(url: endpointURL)
         request.httpMethod = "POST"
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
-        let contextBody = context.map { chunk in
-            "Fonte: \(chunk.source.path)\n\(chunk.text)"
-        }.joined(separator: "\n\n")
+        let contextBody = Self.formatContextBody(context: context)
 
         let userPrompt = "Contexto:\n\(contextBody)\n\nPergunta:\n\(question)"
         let encoder = JSONEncoder()

@@ -27,6 +27,7 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
     var answer: String
     var sources: [SourceRef]
     var latency: LatencyReport?
+    var isSourcesExpanded: Bool
 
     var pergunta: String { question }
     var resposta: String { answer }
@@ -38,10 +39,12 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
         question: String,
         answer: String,
         sources: [SourceRef] = [],
-        latency: LatencyReport? = nil
+        latency: LatencyReport? = nil,
+        isSourcesExpanded: Bool = false
     ) {
         self.id = id; self.question = question; self.answer = answer
         self.sources = sources; self.latency = latency
+        self.isSourcesExpanded = isSourcesExpanded
     }
 
     init(
@@ -49,10 +52,12 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
         pergunta: String,
         resposta: String,
         fontes: [SourceRef] = [],
-        latencia: LatencyReport? = nil
+        latencia: LatencyReport? = nil,
+        isSourcesExpanded: Bool = false
     ) {
         self.id = id; self.question = pergunta; self.answer = resposta
         self.sources = fontes; self.latency = latencia
+        self.isSourcesExpanded = isSourcesExpanded
     }
 }
 

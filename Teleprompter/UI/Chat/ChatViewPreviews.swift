@@ -64,16 +64,46 @@ import SwiftUI
     .preferredColorScheme(.dark)
 }
 
-#Preview("T02 - 5. Conversa (Claro)") {
+#Preview("T02 - 5a. Conversa (Fontes Fechadas, com Citação) (Claro)") {
     ChatView(
-        viewModel: ChatPreviewHelper.make(kind: .conversa),
+        viewModel: ChatPreviewHelper.make(kind: .conversa, fontesAbertas: false, comCitacao: true),
         lens: SimulatedLens()
     )
 }
 
-#Preview("T02 - 5. Conversa (Escuro)") {
+#Preview("T02 - 5a. Conversa (Fontes Fechadas, com Citação) (Escuro)") {
     ChatView(
-        viewModel: ChatPreviewHelper.make(kind: .conversa),
+        viewModel: ChatPreviewHelper.make(kind: .conversa, fontesAbertas: false, comCitacao: true),
+        lens: SimulatedLens()
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("T02 - 5b. Fontes Abertas (com Citação) (Claro)") {
+    ChatView(
+        viewModel: ChatPreviewHelper.make(kind: .conversa, fontesAbertas: true, comCitacao: true),
+        lens: SimulatedLens()
+    )
+}
+
+#Preview("T02 - 5b. Fontes Abertas (com Citação) (Escuro)") {
+    ChatView(
+        viewModel: ChatPreviewHelper.make(kind: .conversa, fontesAbertas: true, comCitacao: true),
+        lens: SimulatedLens()
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("T02 - 5c. Conversa Sem Citação (Claro)") {
+    ChatView(
+        viewModel: ChatPreviewHelper.make(kind: .conversa, fontesAbertas: false, comCitacao: false),
+        lens: SimulatedLens()
+    )
+}
+
+#Preview("T02 - 5c. Conversa Sem Citação (Escuro)") {
+    ChatView(
+        viewModel: ChatPreviewHelper.make(kind: .conversa, fontesAbertas: false, comCitacao: false),
         lens: SimulatedLens()
     )
     .preferredColorScheme(.dark)
@@ -143,7 +173,12 @@ import SwiftUI
 
 @MainActor
 enum ChatPreviewHelper {
-    static func make(kind: ChatScreenState.Kind, hasMaterial: Bool = true) -> ConversationViewModel {
+    static func make(
+        kind: ChatScreenState.Kind,
+        hasMaterial: Bool = true,
+        fontesAbertas: Bool = false,
+        comCitacao: Bool = true
+    ) -> ConversationViewModel {
         let lens = SimulatedLens()
         let retriever = PreviewRetriever()
         let generator = PreviewGenerator()
@@ -155,14 +190,22 @@ enum ChatPreviewHelper {
             transcriber: PreviewTranscriber()
         )
         viewModel.hasMaterialProvider = { hasMaterial }
-        configure(viewModel: viewModel, lens: lens, for: kind)
+        configure(
+            viewModel: viewModel,
+            lens: lens,
+            for: kind,
+            fontesAbertas: fontesAbertas,
+            comCitacao: comCitacao
+        )
         return viewModel
     }
 
     private static func configure(
         viewModel: ConversationViewModel,
         lens: SimulatedLens,
-        for kind: ChatScreenState.Kind
+        for kind: ChatScreenState.Kind,
+        fontesAbertas: Bool = false,
+        comCitacao: Bool = true
     ) {
         switch kind {
         case .vazio, .digitando:
@@ -174,7 +217,12 @@ enum ChatPreviewHelper {
             viewModel.state = .pensando
             viewModel.pendingQuestion = "Por que Swift nativo e não Flutter?"
         case .conversa:
-            configureConversa(viewModel: viewModel, lens: lens)
+            configureConversa(
+                viewModel: viewModel,
+                lens: lens,
+                fontesAbertas: fontesAbertas,
+                comCitacao: comCitacao
+            )
         case .semMaterial:
             configureSemMaterial(viewModel: viewModel)
         case .erro:
@@ -187,21 +235,37 @@ enum ChatPreviewHelper {
 
     private static func configureConversa(
         viewModel: ConversationViewModel,
-        lens: SimulatedLens
+        lens: SimulatedLens,
+        fontesAbertas: Bool = false,
+        comCitacao: Bool = true
     ) {
         viewModel.state = .respondido
+
+        let ans1 = comCitacao
+            ? "• Resposta rápida na banca[1]\n• Sem olhar anotações[1]"
+            : "• Resposta rápida na banca\n• Sem olhar anotações"
+
+        let ans2 = comCitacao
+            ? "• DAT SDK só tem módulos Swift[1]\n• Menor latência de áudio[1]\n• Acesso direto ao **SpeechAnalyzer**[2]"
+            : "• DAT SDK só tem módulos Swift\n• Menor latência de áudio\n• Acesso direto ao **SpeechAnalyzer**"
+
         viewModel.messages = [
             ChatMessage(
                 question: "Qual o problema que o app resolve?",
-                answer: "• Resposta rápida na banca\n• Sem olhar anotações",
+                answer: ans1,
                 sources: [SourceRef(path: "README.md")],
-                latency: LatencyReport(retrievalSeconds: 0.1, totalSeconds: 1.4)
+                latency: LatencyReport(retrievalSeconds: 0.1, totalSeconds: 1.4),
+                isSourcesExpanded: false
             ),
             ChatMessage(
                 question: "Por que Swift nativo e não Flutter?",
-                answer: "• DAT SDK só tem módulos Swift\n• Menor latência de áudio",
-                sources: [SourceRef(path: "qa/stack.md"), SourceRef(path: "docs/ADR-0001.md")],
-                latency: LatencyReport(retrievalSeconds: 0.05, totalSeconds: 0.6)
+                answer: ans2,
+                sources: [
+                    SourceRef(path: "qa/stack.md"),
+                    SourceRef(path: "docs/adr/0001-swift-nativo-com-dat-sdk.md")
+                ],
+                latency: LatencyReport(retrievalSeconds: 0.05, totalSeconds: 0.6),
+                isSourcesExpanded: fontesAbertas
             )
         ]
         lens.show(
