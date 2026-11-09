@@ -27,6 +27,11 @@ test-results/
 # Override pessoal da CLI de IA
 CLAUDE.local.md
 
+# Temporários de scripts
+*.tmp
+*.tmp.*
+tools/.tmp/
+
 # Swift / Xcode
 .build/
 build.noindex/
