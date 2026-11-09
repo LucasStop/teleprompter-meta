@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 env:
   FIRST_ISSUE: 1
@@ -33,9 +34,14 @@ jobs:
           [ "$N" -ge "$FIRST_ISSUE" ] || exit 0
           closer=$(gh api graphql -F n="$N" -F o="${REPO%/*}" -F r="${REPO#*/}" -f query='
             query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){
-              timelineItems(itemTypes:CLOSED_EVENT,last:1){nodes{... on ClosedEvent{closer{__typename}}}}}}}' \
-            --jq '.data.repository.issue.timelineItems.nodes[0].closer.__typename // "none"')
-          if [ "$closer" != "PullRequest" ]; then
+              timelineItems(itemTypes:CLOSED_EVENT,last:1){nodes{... on ClosedEvent{closer{__typename ... on Commit{oid}}}}}}}}' \
+            --jq '.data.repository.issue.timelineItems.nodes[0].closer | (.__typename // "none") + " " + (.oid // "")')
+          kind=${closer%% *}; sha=${closer##* }
+          # Com vários `Closes #N`, o GitHub atribui o fechamento ao commit do merge: vale se esse commit veio de PR mergeado.
+          if [ "$kind" = Commit ] && [ -n "$(gh api "repos/$REPO/commits/$sha/pulls" --jq '.[]|select(.merged_at!=null)|.number' | head -1)" ]; then
+            kind=PullRequest
+          fi
+          if [ "$kind" != "PullRequest" ]; then
             gh issue reopen "$N" --repo "$REPO" \
               --comment "Reaberta: issue só fecha por PR com \`Closes #$N\` (ou como \"not planned\"). Abra a branch por esta issue e o PR a partir dela."
           fi
