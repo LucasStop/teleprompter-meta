@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "chaves ficticias de teste"
+condition = "AND"
+paths = ['''TeleprompterTests/''']
+rules = ["generic-api-key"]
