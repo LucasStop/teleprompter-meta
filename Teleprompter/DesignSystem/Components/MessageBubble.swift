@@ -71,9 +71,10 @@ public struct MessageBubble: View {
                 .foregroundStyle(Colors.primaryForeground.opacity(0.85))
             }
 
-            Text(text)
+            Text(Self.markdown(text))
                 .font(Typography.body)
                 .foregroundStyle(role == .answer ? Colors.foreground : Colors.primaryForeground)
+                .fixedSize(horizontal: false, vertical: true)
 
             if !bullets.isEmpty {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -82,9 +83,10 @@ public struct MessageBubble: View {
                             Text("•")
                                 .font(Typography.body)
                                 .foregroundStyle(Colors.muted)
-                            Text(bullet)
+                            Text(Self.markdown(bullet))
                                 .font(Typography.body)
                                 .foregroundStyle(Colors.foreground)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -92,7 +94,8 @@ public struct MessageBubble: View {
             }
 
             if !sources.isEmpty {
-                HStack(spacing: Spacing.s1) {
+                // Uma fonte por linha: em colunas o caminho era cortado e ilegível.
+                VStack(alignment: .leading, spacing: Spacing.s1) {
                     ForEach(sources, id: \.self) { source in
                         SourceChip(title: source)
                     }
@@ -100,6 +103,12 @@ public struct MessageBubble: View {
                 .padding(.top, Spacing.s1)
             }
         }
+    }
+
+    /// Renderiza negrito/itálico/código do markdown inline; texto sem markdown válido volta como está.
+    static func markdown(_ string: String) -> AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: string, options: options)) ?? AttributedString(string)
     }
 
     private var bubbleBackground: Color {

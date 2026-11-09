@@ -28,6 +28,8 @@ public struct SourceChip: View {
     private var chipLabel: some View {
         Text(title)
             .font(.system(size: 12, weight: .regular, design: .monospaced))
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
             .foregroundStyle(Colors.muted)
             .padding(.horizontal, Spacing.s2)
             .padding(.vertical, Spacing.s1)
