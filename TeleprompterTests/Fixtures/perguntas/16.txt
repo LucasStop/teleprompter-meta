@@ -1,0 +1,1 @@
+Qual a diferença entre classe e objeto?

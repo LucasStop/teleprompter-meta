@@ -1,0 +1,1 @@
+Como funciona a contagem de pontos de função para estimar o tamanho do sistema?
