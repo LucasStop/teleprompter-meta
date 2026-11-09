@@ -225,7 +225,7 @@ struct FolderConcluidoContentView: View {
                     HStack(alignment: .top, spacing: Spacing.s2) {
                         Text("\(formatNumber(banner.ignoredCount)) arquivos ignorados.")
                             .fontWeight(.bold)
-                            .foregroundStyle(Colors.danger)
+                            .foregroundStyle(Colors.foreground)
                             + Text(" " + banner.message)
                             .foregroundStyle(Colors.foreground)
                     }
@@ -236,7 +236,7 @@ struct FolderConcluidoContentView: View {
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
                     .overlay(
                         RoundedRectangle(cornerRadius: CornerRadius.md)
-                            .stroke(Colors.danger, lineWidth: Borders.standard)
+                            .stroke(Colors.border, lineWidth: Borders.standard)
                     )
                     .padding(.horizontal, Spacing.s4)
                     .padding(.top, Spacing.s2)
