@@ -9,15 +9,29 @@ import Observation
 final class AppEnvironment {
     let lens: SimulatedLens
     let conversationViewModel: ConversationViewModel
+    let settingsStore: any SettingsStore
+    let secretStore: any SecretStore
+    let settingsViewModel: SettingsViewModel
     let materialViewModel: MaterialViewModel
 
     init(
         lens: SimulatedLens = SimulatedLens(),
         conversationViewModel: ConversationViewModel? = nil,
+        settingsStore: (any SettingsStore)? = nil,
+        secretStore: (any SecretStore)? = nil,
         materialViewModel: MaterialViewModel? = nil
     ) {
         let lensInstance = lens
         self.lens = lensInstance
+
+        let effectiveSettingsStore: any SettingsStore = settingsStore ?? UserDefaultsSettingsStore()
+        let effectiveSecretStore: any SecretStore = secretStore ?? KeychainStore()
+        self.settingsStore = effectiveSettingsStore
+        self.secretStore = effectiveSecretStore
+        self.settingsViewModel = SettingsViewModel(
+            settingsStore: effectiveSettingsStore,
+            secretStore: effectiveSecretStore
+        )
 
         let retriever = InMemoryAppRetriever()
         if let conversationViewModel {

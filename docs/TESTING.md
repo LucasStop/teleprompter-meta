@@ -22,7 +22,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | ResponseFormatter | Texto estoura a lente 600x600 | unitário, visual | Swift Testing; swift-snapshot-testing | local, PR | |
 | Glasses (DAT SDK) | Mudança do SDK em preview, queda de conexão | integração com Mock Device Kit, manual em campo | Mock Device Kit (não cobre display nem microfone); roteiro manual com óculos | PR (mock), manual (fases 3 a 5) | Teste automatizado com óculos reais não existe |
 | Interface iPhone e lente simulada | Estado ou variante quebrada, jornada quebrada | componente, visual, acessibilidade, E2E | XCTest das ViewModels + previews; swift-snapshot-testing; Maestro (flows YAML, fluxo entre telas T01 a T07); XCUITest (smoke pergunta -> resposta + performAccessibilityAudit) | local (Maestro), PR (XCUITest) | Maestro não roda no CI (lento e instável em runner macOS); não cobre óculos nem microfone |
-| Persistência e segredos | Perda de configuração, chave no repo | integração, segurança | XCTest com fakes de arquivo; gitleaks + revisão de Keychain | PR | Migração só se adotar SwiftData |
+| Persistência e segredos | Perda de configuração, chave no repo | integração, segurança | XCTest com suites temporárias de UserDefaults e Keychain; SettingsStoreTests, SettingsViewModelTests, KeychainTests; gitleaks + revisão de Keychain | PR | Migração só se adotar SwiftData |
 | Infra / CI | Build quebrado | estático | GitHub Actions macOS, SwiftLint, gitleaks | PR | Sem deploy: instalação local no iPhone |
 
 "Roda em": local (pré-commit ou sob demanda), PR (CI bloqueante), deploy (smoke pós-deploy), nightly (agendado).
@@ -52,9 +52,9 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | US-02 | Fim detectado uma única vez | QuestionDetector | unitário |
 | US-03 | Nota de Q&A devolvida sem LLM | Retrieval | unitário |
 | US-04 | Primeiro texto em menos de 2 s, só contexto recuperado | LLM com fake; protótipo P3 | integração, manual |
-| US-05 | Respeita limite da lente | ResponseFormatter | unitário, visual |
+| US-05 | Respeita limite da lente e formato configurado | ResponseFormatter, SettingsViewModelTests | unitário, visual |
 | US-06 | Lente simulada exibe a resposta | lente simulada | E2E, visual |
-| US-07 | Configuração persiste | Persistência | integração |
+| US-07 | Configuração persiste | SettingsStoreTests, SettingsViewModelTests | integração, unitário |
 | US-08 | Resposta na lente real | roteiro manual com óculos | manual |
 | US-09 | Gesto repete ou pula | Glasses + manual | manual |
 | US-10 | 60 min sem falha | sessão de campo | manual, desempenho |
