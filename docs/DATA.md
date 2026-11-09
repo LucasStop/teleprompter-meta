@@ -8,6 +8,10 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 - Banco: sem servidor. SQLite com FTS5 e tabela de embeddings, gerado por `Tools/Indexer` (ADR-0006, proposta); configurações em arquivo local · Cache/fila: N/A · Arquivos: material importado e índice.
 - Ambientes: local e iPhone; teste com diretório temporário por execução. Sem produção separada.
 
+### Configurações e Segredos (`SettingsStore` e `SecretStore`)
+- Configurações gerais (`SettingsStore`): armazenadas via `UserDefaultsSettingsStore` sob a chave `br.com.lucasstop.teleprompter.settings` como JSON codificado da struct `Settings`. Não contém segredos.
+- Chave de API de LLM (`SecretStore`): armazenada exclusivamente no Keychain via `KeychainStore` sob a chave `llm.apiKey` (serviço `br.com.lucasstop.teleprompter`). Nunca gravada em `UserDefaults`, arquivos de log ou transitada em texto plano pela interface.
+
 ### Esquema SQLite do Índice Local (`LocalRetriever`)
 - Tabela `chunks`:
   - `id INTEGER PRIMARY KEY AUTOINCREMENT`: chave primária interna do trecho.

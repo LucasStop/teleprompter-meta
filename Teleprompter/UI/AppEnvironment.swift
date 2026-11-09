@@ -9,13 +9,27 @@ import Observation
 final class AppEnvironment {
     let lens: SimulatedLens
     let conversationViewModel: ConversationViewModel
+    let settingsStore: any SettingsStore
+    let secretStore: any SecretStore
+    let settingsViewModel: SettingsViewModel
 
     init(
         lens: SimulatedLens = SimulatedLens(),
-        conversationViewModel: ConversationViewModel? = nil
+        conversationViewModel: ConversationViewModel? = nil,
+        settingsStore: (any SettingsStore)? = nil,
+        secretStore: (any SecretStore)? = nil
     ) {
         let lensInstance = lens
         self.lens = lensInstance
+
+        let effectiveSettingsStore: any SettingsStore = settingsStore ?? UserDefaultsSettingsStore()
+        let effectiveSecretStore: any SecretStore = secretStore ?? KeychainStore()
+        self.settingsStore = effectiveSettingsStore
+        self.secretStore = effectiveSecretStore
+        self.settingsViewModel = SettingsViewModel(
+            settingsStore: effectiveSettingsStore,
+            secretStore: effectiveSecretStore
+        )
 
         if let conversationViewModel {
             self.conversationViewModel = conversationViewModel

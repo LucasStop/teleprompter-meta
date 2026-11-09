@@ -58,7 +58,7 @@ public struct RootTabView: View {
                 }
                 .tag(AppTab.ensaio)
 
-            AjustesPlaceholderView()
+            SettingsView(viewModel: environment.settingsViewModel)
                 .tabItem {
                     Label(AppTab.ajustes.title, systemImage: AppTab.ajustes.iconName)
                 }
