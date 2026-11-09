@@ -48,6 +48,7 @@ struct SimulatedLensModalView: View {
                     .foregroundStyle(Colors.primary)
                     .frame(minHeight: Spacing.minTouchTarget)
                     .accessibilityLabel("Fechar lente simulada")
+                    .accessibilityIdentifier("lens-modal-close-button")
                 }
             }
         }

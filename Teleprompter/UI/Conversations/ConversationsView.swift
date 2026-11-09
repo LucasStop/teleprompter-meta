@@ -61,6 +61,7 @@ struct ConversationsView: View {
             Text("Conversas")
                 .font(Typography.h1)
                 .foregroundStyle(Colors.foreground)
+                .accessibilityIdentifier("conversas-title")
 
             Spacer()
 
@@ -83,6 +84,7 @@ struct ConversationsView: View {
             )
             .buttonStyle(.plain)
             .accessibilityLabel("Voltar para o Chat")
+            .accessibilityIdentifier("conversas-back-button")
         }
     }
 
@@ -263,6 +265,7 @@ struct ConversationsView: View {
         )
         .buttonStyle(.plain)
         .accessibilityLabel("Apagar todas as conversas")
+        .accessibilityIdentifier("conversas-delete-all-button")
     }
 }
 

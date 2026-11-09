@@ -1,0 +1,17 @@
+appId: br.com.lucasstop.teleprompter
+---
+- launchApp
+- tapOn: "Chat"
+- assertVisible:
+    id: "chat-title"
+- tapOn: "Campo de pergunta"
+- inputText: "O que e o app?"
+- tapOn: "Enviar pergunta"
+- assertVisible: ".*Não encontrei.*"
+- tapOn:
+    id: "chat-lens-button"
+- assertVisible: "Lente simulada"
+- tapOn:
+    id: "lens-modal-close-button"
+- assertVisible:
+    id: "chat-title"

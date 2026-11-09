@@ -1,0 +1,14 @@
+appId: br.com.lucasstop.teleprompter
+---
+- launchApp
+- tapOn: "Chat"
+- assertVisible:
+    id: "chat-title"
+- tapOn:
+    id: "chat-conversas-button"
+- assertVisible:
+    id: "conversas-title"
+- tapOn:
+    id: "conversas-back-button"
+- assertVisible:
+    id: "chat-title"

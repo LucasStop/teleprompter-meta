@@ -111,6 +111,33 @@ TEST_RUNNER_RUN_LLM=1 RUN_LLM=1 xcodebuild test -scheme Teleprompter -destinatio
   - O teste completo com STT (`WERHarnessTests.testWordErrorRateOnRecordedQuestions`) roda apenas localmente com `RUN_STT=1` (faz `XCTSkip` no CI e quando não houver `.wav`).
   - Os testes unitários de pareamento de arquivos e métricas (`WERDatasetDiscoveryTests` e similares dentro de `WERHarnessTests`) rodam sempre na suíte padrão sem depender de STT nem de chamada de rede.
 
+### Fluxos de tela locais com Maestro (.maestro/)
+Validação end-to-end de fluxos entre telas rodando localmente no simulador iPhone 17 (não roda no CI).
+- Requisitos: Xcode com simulador iPhone 17 e Maestro CLI (`brew install mobile-dev-inc/tap/maestro`).
+- Passo a passo de execução:
+  1. Gerar e compilar o app para simulador:
+     ```bash
+     xcodegen generate
+     xcodebuild build -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath build.noindex
+     ```
+  2. Inicializar o simulador e instalar o app:
+     ```bash
+     xcrun simctl boot "iPhone 17" || true
+     xcrun simctl install booted build.noindex/Build/Products/Debug-iphonesimulator/Teleprompter.app
+     xcrun simctl launch booted br.com.lucasstop.teleprompter
+     ```
+  3. Rodar os fluxos Maestro:
+     ```bash
+     maestro test .maestro/
+     ```
+- Fluxos existentes na suíte:
+  - `01-abas.yaml`: Navegação entre as 4 abas inferiores (Chat, Material, Ensaio, Ajustes) e volta ao Chat.
+  - `02-chat-texto.yaml`: Envio de pergunta por texto no chat, asserção da resposta "Não encontrei", abertura e fechamento da lente simulada.
+  - `03-material.yaml`: Exibição da aba Material, estado vazio/padrão e botão de importar material.
+  - `04-ajustes.yaml`: Alteração do formato de resposta em Ajustes e restauração para os valores padrão.
+  - `05-ensaio.yaml`: Aba Ensaio no estado vazio com instrução e botão de adicionar áudios (sem tocar no microfone).
+  - `06-conversas.yaml`: Abertura da lista de conversas pelo cabeçalho do Chat e retorno ao chat.
+
 ## 7. Pronto (Definition of Done) para PR
 - [ ] Testes novos ou alterados cobrem a mudança no nível certo
 - [ ] Suíte completa verde no CI

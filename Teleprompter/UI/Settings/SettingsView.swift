@@ -325,6 +325,7 @@ extension SettingsView {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Restaurar configurações para os valores padrão")
+        .accessibilityIdentifier("settings-restore-defaults-button")
         .padding(.top, Spacing.s2)
     }
 
