@@ -98,7 +98,23 @@ final class ConversationViewModel {
     let audioSource: (any AudioSource)?
     let speechAssetManager: (any SpeechAssetManager)?
     let generatorProvider: (@Sendable (Settings, any SecretStore) -> (any AnswerGenerator)?)?
+    var hasMaterialProvider: (@Sendable () -> Bool)?
+    var onProjectChanged: (@MainActor (String) async -> Void)?
     var listenTask: Task<Void, Never>?
+
+    var hasMaterial: Bool {
+        if let provider = hasMaterialProvider {
+            return provider()
+        }
+        let activeProj = settingsStore?.load().activeProjectId ?? "default"
+        if let prod = retriever as? ProductionAppRetriever {
+            return prod.stats(for: activeProj).chunksCount > 0
+        }
+        if let mem = retriever as? InMemoryAppRetriever {
+            return mem.stats(for: activeProj).chunksCount > 0
+        }
+        return true
+    }
 
     init(
         retriever: any Retriever,
@@ -143,6 +159,27 @@ final class ConversationViewModel {
 
     func toggleListening() {
         if isListening { stopListening() } else { startListening() }
+    }
+
+    func clearChat() {
+        self.messages = []
+        self.currentConversationId = nil
+        self.state = .vazio
+        self.errorMessage = nil
+        self.lastLatencyReport = nil
+        self.lastLensContent = nil
+        self.currentTranscript = ""
+    }
+
+    func switchProject(to projectId: String) async {
+        if var settings = settingsStore?.load() {
+            settings.activeProjectId = projectId
+            settingsStore?.save(settings)
+        }
+        clearChat()
+        if let onProjectChanged {
+            await onProjectChanged(projectId)
+        }
     }
 }
 
@@ -307,68 +344,5 @@ extension ConversationViewModel {
             return "\(desc) Tente novamente."
         }
         return "Não foi possível buscar ou gerar a resposta. Verifique a conexão e tente novamente."
-    }
-}
-
-// MARK: - Conversas e Persistência
-
-extension ConversationViewModel {
-    func loadConversation(_ conversation: Conversation) {
-        self.currentConversationId = conversation.id
-        var chatMessages: [ChatMessage] = []
-        var currentQuestion: Message?
-
-        for msg in conversation.messages {
-            if msg.role == .question {
-                currentQuestion = msg
-            } else if msg.role == .answer {
-                let latency = msg.latencyMs.map {
-                    LatencyReport(retrievalSeconds: 0, totalSeconds: Double($0) / 1000.0)
-                }
-                chatMessages.append(
-                    ChatMessage(
-                        id: msg.id, question: currentQuestion?.text ?? "",
-                        answer: msg.text, sources: msg.sources, latency: latency
-                    )
-                )
-                currentQuestion = nil
-            }
-        }
-
-        if let pendingQ = currentQuestion {
-            chatMessages.append(ChatMessage(id: pendingQ.id, question: pendingQ.text, answer: "", sources: []))
-        }
-
-        self.messages = chatMessages
-        self.state = chatMessages.isEmpty ? .vazio : .respondido
-    }
-
-    private func saveToConversationStore(
-        question: String,
-        answer: String,
-        sources: [SourceRef],
-        latency: LatencyReport?
-    ) async {
-        guard let conversationStore else { return }
-
-        let convId = currentConversationId ?? UUID()
-        currentConversationId = convId
-
-        let latencyMs = latency.map { Int($0.totalSeconds * 1000.0) }
-        let qMessage = Message(role: .question, text: question, sources: [], latencyMs: nil, createdAt: Date())
-        let aMessage = Message(role: .answer, text: answer, sources: sources, latencyMs: latencyMs, createdAt: Date())
-
-        do {
-            var conv = try await conversationStore.load(id: convId) ?? Conversation(
-                id: convId, title: Conversation.deriveTitle(from: question),
-                createdAt: Date(), updatedAt: Date(), messages: []
-            )
-            conv.updatedAt = Date()
-            conv.messages.append(qMessage)
-            conv.messages.append(aMessage)
-            try await conversationStore.save(conv)
-        } catch {
-            // Falha ao salvar não derruba o chat
-        }
     }
 }

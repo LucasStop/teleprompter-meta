@@ -124,11 +124,26 @@ import SwiftUI
     .preferredColorScheme(.dark)
 }
 
+#Preview("T02 - 9. Vazio Sem Material (Claro)") {
+    ChatView(
+        viewModel: ChatPreviewHelper.make(kind: .vazio, hasMaterial: false),
+        lens: SimulatedLens()
+    )
+}
+
+#Preview("T02 - 9. Vazio Sem Material (Escuro)") {
+    ChatView(
+        viewModel: ChatPreviewHelper.make(kind: .vazio, hasMaterial: false),
+        lens: SimulatedLens()
+    )
+    .preferredColorScheme(.dark)
+}
+
 // MARK: - ChatPreviewHelper
 
 @MainActor
 enum ChatPreviewHelper {
-    static func make(kind: ChatScreenState.Kind) -> ConversationViewModel {
+    static func make(kind: ChatScreenState.Kind, hasMaterial: Bool = true) -> ConversationViewModel {
         let lens = SimulatedLens()
         let retriever = PreviewRetriever()
         let generator = PreviewGenerator()
@@ -139,6 +154,7 @@ enum ChatPreviewHelper {
             lens: lens,
             transcriber: PreviewTranscriber()
         )
+        viewModel.hasMaterialProvider = { hasMaterial }
         configure(viewModel: viewModel, lens: lens, for: kind)
         return viewModel
     }

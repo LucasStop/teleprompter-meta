@@ -5,17 +5,23 @@ struct ConversationsView: View {
     @Bindable var viewModel: ConversationsViewModel
     var onBack: () -> Void
     var onSelectConversation: (Conversation) -> Void
+    var activeProjectName: String
+    var onOpenProjects: (() -> Void)?
 
     @State private var showingDeleteAllConfirmation: Bool = false
 
     init(
         viewModel: ConversationsViewModel,
         onBack: @escaping () -> Void = {},
-        onSelectConversation: @escaping (Conversation) -> Void = { _ in }
+        onSelectConversation: @escaping (Conversation) -> Void = { _ in },
+        activeProjectName: String = Project.defaultName,
+        onOpenProjects: (() -> Void)? = nil
     ) {
         self.viewModel = viewModel
         self.onBack = onBack
         self.onSelectConversation = onSelectConversation
+        self.activeProjectName = activeProjectName
+        self.onOpenProjects = onOpenProjects
     }
 
     var body: some View {
@@ -23,6 +29,10 @@ struct ConversationsView: View {
             headerView
                 .padding(.horizontal, Spacing.s4)
                 .padding(.top, Spacing.s4)
+                .padding(.bottom, Spacing.s1)
+
+            ProjectLine(projectName: activeProjectName, action: onOpenProjects)
+                .padding(.horizontal, Spacing.s4)
                 .padding(.bottom, Spacing.s2)
 
             switch viewModel.state {

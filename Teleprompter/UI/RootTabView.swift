@@ -26,6 +26,7 @@ public struct RootTabView: View {
 
     @State private var selectedTab: AppTab = .chat
     @State private var isShowingConversations: Bool = false
+    @State private var isShowingProjectsSheet: Bool = false
     private let environment: AppEnvironment
 
     public init() {
@@ -48,6 +49,10 @@ public struct RootTabView: View {
                         onSelectConversation: { conversation in
                             openConversation(conversation)
                             isShowingConversations = false
+                        },
+                        activeProjectName: environment.projectsViewModel.activeProjectName,
+                        onOpenProjects: {
+                            isShowingProjectsSheet = true
                         }
                     )
                 } else {
@@ -56,6 +61,10 @@ public struct RootTabView: View {
                         lens: environment.lens,
                         onOpenConversations: {
                             isShowingConversations = true
+                        },
+                        activeProjectName: environment.projectsViewModel.activeProjectName,
+                        onOpenProjects: {
+                            isShowingProjectsSheet = true
                         }
                     )
                 }
@@ -65,11 +74,17 @@ public struct RootTabView: View {
             }
             .tag(AppTab.chat)
 
-            MaterialView(viewModel: environment.materialViewModel)
-                .tabItem {
-                    Label(AppTab.material.title, systemImage: AppTab.material.iconName)
+            MaterialView(
+                viewModel: environment.materialViewModel,
+                activeProjectName: environment.projectsViewModel.activeProjectName,
+                onOpenProjects: {
+                    isShowingProjectsSheet = true
                 }
-                .tag(AppTab.material)
+            )
+            .tabItem {
+                Label(AppTab.material.title, systemImage: AppTab.material.iconName)
+            }
+            .tag(AppTab.material)
 
             EnsaioView(viewModel: environment.ensaioViewModel)
                 .tabItem {
@@ -84,6 +99,9 @@ public struct RootTabView: View {
                 .tag(AppTab.ajustes)
         }
         .tint(Colors.primary)
+        .sheet(isPresented: $isShowingProjectsSheet) {
+            ProjectsSheetView(viewModel: environment.projectsViewModel)
+        }
     }
 
     private func openConversation(_ conversation: Conversation) {

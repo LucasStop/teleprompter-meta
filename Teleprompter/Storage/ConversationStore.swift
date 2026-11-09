@@ -1,8 +1,6 @@
 import Foundation
 import SQLite3
 
-private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-
 // MARK: - Modelos de Domínio
 
 enum MessageRole: String, Sendable, Codable, Equatable {
@@ -31,16 +29,25 @@ struct Message: Identifiable, Sendable, Equatable {
 struct Conversation: Identifiable, Sendable, Equatable {
     let id: UUID
     var title: String
+    var projectId: String
     var createdAt: Date
     var updatedAt: Date
     var messages: [Message]
     var messageCount: Int { messages.count }
 
     init(
-        id: UUID = UUID(), title: String? = nil, createdAt: Date = Date(),
-        updatedAt: Date = Date(), messages: [Message] = []
+        id: UUID = UUID(),
+        title: String? = nil,
+        projectId: String = "default",
+        createdAt: Date = Date(),
+        updatedAt: Date = Date(),
+        messages: [Message] = []
     ) {
-        self.id = id; self.createdAt = createdAt; self.updatedAt = updatedAt; self.messages = messages
+        self.id = id
+        self.projectId = projectId
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.messages = messages
         let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmedTitle, !trimmedTitle.isEmpty {
             self.title = trimmedTitle
@@ -75,6 +82,9 @@ protocol ConversationStore: Sendable {
     func load(id: UUID) async throws -> Conversation?
     func delete(id: UUID) async throws
     func deleteAll() async throws
+    func deleteAll(forProjectId projectId: String) async throws
+    func list(forProjectId projectId: String) async throws -> [Conversation]
+    func count(forProjectId projectId: String) async throws -> Int
 }
 
 enum ConversationStoreError: Error, LocalizedError, Sendable {
@@ -91,22 +101,17 @@ enum ConversationStoreError: Error, LocalizedError, Sendable {
     }
 }
 
-private struct ConversationRecord: Sendable {
-    let id: UUID
-    let title: String
-    let createdAt: Date
-    let updatedAt: Date
-}
-
 // MARK: - SQLite Conversation Store
 
 final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
-    static let currentSchemaVersion: Int32 = 1
+    static let currentSchemaVersion: Int32 = 2
 
-    fileprivate let database: OpaquePointer
-    fileprivate let queue = DispatchQueue(label: "br.com.lucasstop.teleprompter.storage.conversation")
+    let database: OpaquePointer
+    let queue = DispatchQueue(label: "br.com.lucasstop.teleprompter.storage.conversation")
+    private var activeProjectIdProvider: (@Sendable () -> String)?
 
-    init(databaseURL: URL) throws {
+    init(databaseURL: URL, activeProjectIdProvider: (@Sendable () -> String)? = nil) throws {
+        self.activeProjectIdProvider = activeProjectIdProvider
         let directoryURL = databaseURL.deletingLastPathComponent()
         if !FileManager.default.fileExists(atPath: directoryURL.path) {
             try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
@@ -119,6 +124,14 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
         self.database = dbPointer
         try configurePragmas()
         try migrate(to: Self.currentSchemaVersion)
+    }
+
+    func setActiveProjectIdProvider(_ provider: @escaping @Sendable () -> String) {
+        self.activeProjectIdProvider = provider
+    }
+
+    private func currentActiveProjectId() -> String {
+        activeProjectIdProvider?() ?? Project.defaultId
     }
 
     private func configurePragmas() throws {
@@ -157,21 +170,42 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
             """
             try executeSQL(sql)
         }
+
+        if current < 2 && targetVersion >= 2 {
+            let sql = """
+            ALTER TABLE conversations ADD COLUMN project_id TEXT NOT NULL DEFAULT 'default';
+            CREATE INDEX IF NOT EXISTS idx_conversations_project ON conversations(project_id, updated_at DESC);
+            PRAGMA user_version = 2;
+            """
+            try executeSQL(sql)
+        }
     }
 
     func rollback(to targetVersion: Int32 = 0) throws {
         let current = try userVersion()
+        if current >= 2 && targetVersion <= 1 {
+            let sql = """
+            DROP INDEX IF EXISTS idx_conversations_project;
+            ALTER TABLE conversations DROP COLUMN project_id;
+            PRAGMA user_version = 1;
+            """
+            try executeSQL(sql)
+        }
+
         if current >= 1 && targetVersion == 0 {
             let sql = """
-            DROP INDEX IF EXISTS idx_messages_conversation; DROP TABLE IF EXISTS messages;
-            DROP INDEX IF EXISTS idx_conversations_updated_at; DROP TABLE IF EXISTS conversations;
+            DROP INDEX IF EXISTS idx_conversations_project;
+            DROP INDEX IF EXISTS idx_messages_conversation;
+            DROP TABLE IF EXISTS messages;
+            DROP INDEX IF EXISTS idx_conversations_updated_at;
+            DROP TABLE IF EXISTS conversations;
             PRAGMA user_version = 0;
             """
             try executeSQL(sql)
         }
     }
 
-    fileprivate func executeSQL(_ sql: String) throws {
+    func executeSQL(_ sql: String) throws {
         var errorMessage: UnsafeMutablePointer<CChar>?
         if sqlite3_exec(database, sql, nil, nil, &errorMessage) != SQLITE_OK {
             let message = errorMessage.map { String(cString: $0) } ?? "Erro desconhecido"
@@ -180,7 +214,7 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
         }
     }
 
-    fileprivate func execute(_ sql: String, bind: ((OpaquePointer) -> Void)? = nil) throws {
+    func execute(_ sql: String, bind: ((OpaquePointer) -> Void)? = nil) throws {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
             throw ConversationStoreError.databaseExecutionFailed(String(cString: sqlite3_errmsg(database)))
@@ -192,7 +226,11 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
         }
     }
 
-    fileprivate func query<T>(_ sql: String, bind: ((OpaquePointer) -> Void)? = nil, parse: (OpaquePointer) -> T?) throws -> [T] {
+    func query<T>(
+        _ sql: String,
+        bind: ((OpaquePointer) -> Void)? = nil,
+        parse: (OpaquePointer) -> T?
+    ) throws -> [T] {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
             throw ConversationStoreError.databaseExecutionFailed(String(cString: sqlite3_errmsg(database)))
@@ -207,19 +245,38 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
     }
 
     func save(_ conversation: Conversation) async throws {
-        try await runOnQueue { try self.performSave(conversation) }
+        let activeProj = currentActiveProjectId()
+        try await runOnQueue { try self.performSave(conversation, defaultProjectId: activeProj) }
     }
+
     func list() async throws -> [Conversation] {
-        try await runOnQueue { try self.performList() }
+        let activeProj = currentActiveProjectId()
+        return try await list(forProjectId: activeProj)
     }
+
+    func list(forProjectId projectId: String) async throws -> [Conversation] {
+        try await runOnQueue { try self.performList(forProjectId: projectId) }
+    }
+
+    func count(forProjectId projectId: String) async throws -> Int {
+        try await runOnQueue { try self.performCount(forProjectId: projectId) }
+    }
+
     func load(id: UUID) async throws -> Conversation? {
         try await runOnQueue { try self.performLoad(id: id) }
     }
+
     func delete(id: UUID) async throws {
         try await runOnQueue { try self.performDelete(id: id) }
     }
+
     func deleteAll() async throws {
-        try await runOnQueue { try self.performDeleteAll() }
+        let activeProj = currentActiveProjectId()
+        try await deleteAll(forProjectId: activeProj)
+    }
+
+    func deleteAll(forProjectId projectId: String) async throws {
+        try await runOnQueue { try self.performDeleteAll(forProjectId: projectId) }
     }
 
     private func runOnQueue<T: Sendable>(_ block: @escaping @Sendable () throws -> T) async throws -> T {
@@ -232,149 +289,5 @@ final class SQLiteConversationStore: ConversationStore, @unchecked Sendable {
                 }
             }
         }
-    }
-}
-
-// MARK: - Operações Internas SQLite
-
-extension SQLiteConversationStore {
-    fileprivate func performSave(_ conv: Conversation) throws {
-        try executeSQL("BEGIN IMMEDIATE TRANSACTION;")
-        do {
-            let upsertSQL = """
-            INSERT INTO conversations (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET title = excluded.title, created_at = excluded.created_at, updated_at = excluded.updated_at;
-            """
-            try execute(upsertSQL) { stmt in
-                sqlite3_bind_text(stmt, 1, conv.id.uuidString, -1, sqliteTransient)
-                sqlite3_bind_text(stmt, 2, conv.title, -1, sqliteTransient)
-                sqlite3_bind_double(stmt, 3, conv.createdAt.timeIntervalSince1970)
-                sqlite3_bind_double(stmt, 4, conv.updatedAt.timeIntervalSince1970)
-            }
-            try execute("DELETE FROM messages WHERE conversation_id = ?;") { stmt in
-                sqlite3_bind_text(stmt, 1, conv.id.uuidString, -1, sqliteTransient)
-            }
-            let insertMsgSQL = """
-            INSERT INTO messages (id, conversation_id, role, text, sources, latency_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?);
-            """
-            for msg in conv.messages {
-                let sourcesJSON = serializeSources(msg.sources)
-                try execute(insertMsgSQL) { stmt in
-                    sqlite3_bind_text(stmt, 1, msg.id.uuidString, -1, sqliteTransient)
-                    sqlite3_bind_text(stmt, 2, conv.id.uuidString, -1, sqliteTransient)
-                    sqlite3_bind_text(stmt, 3, msg.role.rawValue, -1, sqliteTransient)
-                    sqlite3_bind_text(stmt, 4, msg.text, -1, sqliteTransient)
-                    sqlite3_bind_text(stmt, 5, sourcesJSON, -1, sqliteTransient)
-                    if let lat = msg.latencyMs { sqlite3_bind_int64(stmt, 6, Int64(lat)) } else { sqlite3_bind_null(stmt, 6) }
-                    sqlite3_bind_double(stmt, 7, msg.createdAt.timeIntervalSince1970)
-                }
-            }
-            try executeSQL("COMMIT;")
-        } catch {
-            try? executeSQL("ROLLBACK;")
-            throw error
-        }
-    }
-
-    fileprivate func performList() throws -> [Conversation] {
-        let sql = "SELECT id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC;"
-        let records = try query(sql) { stmt -> ConversationRecord? in
-            guard let idStr = sqlite3_column_text(stmt, 0).map({ String(cString: $0) }),
-                  let id = UUID(uuidString: idStr),
-                  let title = sqlite3_column_text(stmt, 1).map({ String(cString: $0) }) else { return nil }
-            return ConversationRecord(
-                id: id, title: title,
-                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)),
-                updatedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3))
-            )
-        }
-        return try records.map { rec in
-            let msgs = try loadMessages(forConversationId: rec.id)
-            return Conversation(id: rec.id, title: rec.title, createdAt: rec.createdAt, updatedAt: rec.updatedAt, messages: msgs)
-        }
-    }
-
-    fileprivate func performLoad(id: UUID) throws -> Conversation? {
-        let sql = "SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?;"
-        let records = try query(sql, bind: { stmt in
-            sqlite3_bind_text(stmt, 1, id.uuidString, -1, sqliteTransient)
-        }, parse: { stmt -> ConversationRecord? in
-            guard let idStr = sqlite3_column_text(stmt, 0).map({ String(cString: $0) }),
-                  let parsedId = UUID(uuidString: idStr),
-                  let title = sqlite3_column_text(stmt, 1).map({ String(cString: $0) }) else { return nil }
-            return ConversationRecord(
-                id: parsedId, title: title,
-                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)),
-                updatedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3))
-            )
-        })
-        guard let first = records.first else { return nil }
-        let msgs = try loadMessages(forConversationId: first.id)
-        return Conversation(id: first.id, title: first.title, createdAt: first.createdAt, updatedAt: first.updatedAt, messages: msgs)
-    }
-
-    private func loadMessages(forConversationId convId: UUID) throws -> [Message] {
-        let sql = "SELECT id, role, text, sources, latency_ms, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC;"
-        return try query(sql, bind: { stmt in
-            sqlite3_bind_text(stmt, 1, convId.uuidString, -1, sqliteTransient)
-        }, parse: { stmt -> Message? in
-            guard let idStr = sqlite3_column_text(stmt, 0).map({ String(cString: $0) }),
-                  let id = UUID(uuidString: idStr),
-                  let roleStr = sqlite3_column_text(stmt, 1).map({ String(cString: $0) }),
-                  let role = MessageRole(rawValue: roleStr),
-                  let text = sqlite3_column_text(stmt, 2).map({ String(cString: $0) }),
-                  let sourcesJSON = sqlite3_column_text(stmt, 3).map({ String(cString: $0) }) else { return nil }
-            let latencyMs = sqlite3_column_type(stmt, 4) == SQLITE_NULL ? nil : Int(sqlite3_column_int64(stmt, 4))
-            let createdAt = Date(timeIntervalSince1970: sqlite3_column_double(stmt, 5))
-            let sources = deserializeSources(sourcesJSON)
-            return Message(id: id, role: role, text: text, sources: sources, latencyMs: latencyMs, createdAt: createdAt)
-        })
-    }
-
-    fileprivate func performDelete(id: UUID) throws {
-        try execute("DELETE FROM conversations WHERE id = ?;") { stmt in
-            sqlite3_bind_text(stmt, 1, id.uuidString, -1, sqliteTransient)
-        }
-    }
-
-    fileprivate func performDeleteAll() throws {
-        try executeSQL("DELETE FROM messages; DELETE FROM conversations;")
-    }
-
-    private func serializeSources(_ sources: [SourceRef]) -> String {
-        guard let data = try? JSONEncoder().encode(sources.map(\.path)),
-              let str = String(data: data, encoding: .utf8) else { return "[]" }
-        return str
-    }
-
-    private func deserializeSources(_ json: String) -> [SourceRef] {
-        guard let data = json.data(using: .utf8),
-              let paths = try? JSONDecoder().decode([String].self, from: data) else { return [] }
-        return paths.map { SourceRef(path: $0) }
-    }
-}
-
-// MARK: - InMemoryConversationStore
-
-actor InMemoryConversationStore: ConversationStore {
-    private var conversations: [UUID: Conversation] = [:]
-
-    init(initialConversations: [Conversation] = []) {
-        for conv in initialConversations { conversations[conv.id] = conv }
-    }
-    func save(_ conversation: Conversation) async throws {
-        conversations[conversation.id] = conversation
-    }
-    func list() async throws -> [Conversation] {
-        return conversations.values.sorted { $0.updatedAt > $1.updatedAt }
-    }
-    func load(id: UUID) async throws -> Conversation? {
-        return conversations[id]
-    }
-    func delete(id: UUID) async throws {
-        conversations.removeValue(forKey: id)
-    }
-    func deleteAll() async throws {
-        conversations.removeAll()
     }
 }

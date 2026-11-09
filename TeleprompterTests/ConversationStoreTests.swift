@@ -187,7 +187,7 @@ final class ConversationStoreTests: XCTestCase {
 
         let initialVersion = try store.userVersion()
         XCTAssertEqual(initialVersion, SQLiteConversationStore.currentSchemaVersion)
-        XCTAssertEqual(initialVersion, 1)
+        XCTAssertEqual(initialVersion, 2)
 
         // Salva dado para validar integridade pré-rollback
         let conv = Conversation(
@@ -196,15 +196,24 @@ final class ConversationStoreTests: XCTestCase {
         )
         try await store.save(conv)
 
+        // Reversão documentada para a versão 1 (remove project_id mantendo conversas)
+        try store.rollback(to: 1)
+        let versionAfterRollbackTo1 = try store.userVersion()
+        XCTAssertEqual(versionAfterRollbackTo1, 1)
+
+        let reloadedV1 = try await store.load(id: conv.id)
+        XCTAssertNotNil(reloadedV1)
+        XCTAssertEqual(reloadedV1?.title, "Teste Migração")
+
         // Reversão documentada para a versão 0 (drop tables e reset user_version)
         try store.rollback(to: 0)
         let versionAfterRollback = try store.userVersion()
         XCTAssertEqual(versionAfterRollback, 0)
 
-        // Nova migração para versão 1
-        try store.migrate(to: 1)
+        // Nova migração para versão 2
+        try store.migrate(to: 2)
         let versionAfterMigration = try store.userVersion()
-        XCTAssertEqual(versionAfterMigration, 1)
+        XCTAssertEqual(versionAfterMigration, 2)
 
         // Banco volta a estar operacional
         let emptyList = try await store.list()

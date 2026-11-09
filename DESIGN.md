@@ -121,6 +121,8 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Botão de login do provedor | primary full-width | lg (56 pt) | padrão, pressionado, carregando, desabilitado | `Teleprompter/UI/Settings/` | componente + a11y |
 | Linha "conectado" (provedor) | padrão com ação | md | padrão, ação | `Teleprompter/UI/Settings/` | componente + a11y |
 | Fluxo de importação de pasta (T04) | confirmação, progresso, concluído | md | pastaConfirmar, pastaIndexando, pastaConcluido, pastaErro | `Teleprompter/UI/Material/` | componente + visual |
+| Seletor de projeto (`ProjectChip`, `ProjectLine`) | chip de cabeçalho, linha de cabeçalho com chevron | sm, md | padrão, pressionado | `Teleprompter/DesignSystem/Components/ProjectChip.swift` | componente + a11y |
+| Folha de projetos (`ProjectsSheetView`) | lista de projetos, novo projeto, renomear, exclusão destrutiva | modal/sheet | projetos, novo, renomear, excluir | `Teleprompter/UI/Projects/` | componente + visual |
 
 Por componente, registrar em `design/components.md` a anatomia e a regra de uso; o que não tiver variante documentada não existe.
 
@@ -172,5 +174,6 @@ Nenhuma tela é desenvolvida sem protótipo aprovado. O inventário e o status d
 - Sem referências ainda; adicionar links ou prints que representem o alvo.
 
 ## Histórico
+- 2026-11-09: adição do seletor e folha de gerenciamento de projetos (ProjectChip, ProjectLine, ProjectsSheetView, issue #105).
 - 2026-11-09: adição dos componentes de autenticação OAuth de provedores (botão de login e linha conectado para OpenRouter em T03, issue #75).
 - 2026-11-08: criação e aprovação do design system.

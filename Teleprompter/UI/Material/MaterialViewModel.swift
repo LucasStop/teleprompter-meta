@@ -199,6 +199,16 @@ final class MaterialViewModel {
         }
     }
 
+    /// Recarrega as fontes do material a partir do índice do projeto ativo.
+    func reloadForActiveProject() {
+        self.sources = indexable.listActiveSources()
+        self.lastUpdated = sources.isEmpty ? nil : Date()
+        self.loadingState = nil
+        self.errorMessage = nil
+        self.indexedFolderFilePaths.removeAll()
+        self.resetFolderState()
+    }
+
     func dismissError() {
         errorMessage = nil
         folderErrorMessage = nil
