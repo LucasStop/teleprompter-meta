@@ -18,6 +18,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.lucasstop.teleprompter
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "O microfone ouve a pergunta da banca para buscar a resposta no seu material."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "O reconhecimento de fala transcreve a pergunta ouvida para buscar a resposta."
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
   TeleprompterTests:
     type: bundle.unit-test

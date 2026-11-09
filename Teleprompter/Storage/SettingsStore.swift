@@ -49,6 +49,9 @@ struct Settings: Sendable, Codable, Equatable {
     var documentsEnabled: Bool
     var codeEnabled: Bool
     var appearance: AppearancePreference
+    var llmBaseURL: String
+    var llmModel: String
+    var llmProvider: String
 
     static let defaultQAThreshold: Double = 0.40
     static let defaultChunkThreshold: Double = 0.25
@@ -69,7 +72,10 @@ struct Settings: Sendable, Codable, Equatable {
         qaNotesEnabled: true,
         documentsEnabled: true,
         codeEnabled: true,
-        appearance: .system
+        appearance: .system,
+        llmBaseURL: "",
+        llmModel: "",
+        llmProvider: ""
     )
 
     init(
@@ -81,7 +87,10 @@ struct Settings: Sendable, Codable, Equatable {
         qaNotesEnabled: Bool = true,
         documentsEnabled: Bool = true,
         codeEnabled: Bool = true,
-        appearance: AppearancePreference = .system
+        appearance: AppearancePreference = .system,
+        llmBaseURL: String = "",
+        llmModel: String = "",
+        llmProvider: String = ""
     ) {
         self.format = format
         self.qaThreshold = qaThreshold
@@ -92,6 +101,56 @@ struct Settings: Sendable, Codable, Equatable {
         self.documentsEnabled = documentsEnabled
         self.codeEnabled = codeEnabled
         self.appearance = appearance
+        self.llmBaseURL = llmBaseURL
+        self.llmModel = llmModel
+        self.llmProvider = llmProvider
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case format
+        case qaThreshold
+        case chunkThreshold
+        case topK
+        case silenceThreshold
+        case qaNotesEnabled
+        case documentsEnabled
+        case codeEnabled
+        case appearance
+        case llmBaseURL
+        case llmModel
+        case llmProvider
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.format = try container.decodeIfPresent(AnswerFormat.self, forKey: .format) ?? .bullets
+        self.qaThreshold = try container.decodeIfPresent(Double.self, forKey: .qaThreshold) ?? Self.defaultQAThreshold
+        self.chunkThreshold = try container.decodeIfPresent(Double.self, forKey: .chunkThreshold) ?? Self.defaultChunkThreshold
+        self.topK = try container.decodeIfPresent(Int.self, forKey: .topK) ?? Self.defaultTopK
+        self.silenceThreshold = try container.decodeIfPresent(Double.self, forKey: .silenceThreshold) ?? Self.defaultSilenceThreshold
+        self.qaNotesEnabled = try container.decodeIfPresent(Bool.self, forKey: .qaNotesEnabled) ?? true
+        self.documentsEnabled = try container.decodeIfPresent(Bool.self, forKey: .documentsEnabled) ?? true
+        self.codeEnabled = try container.decodeIfPresent(Bool.self, forKey: .codeEnabled) ?? true
+        self.appearance = try container.decodeIfPresent(AppearancePreference.self, forKey: .appearance) ?? .system
+        self.llmBaseURL = try container.decodeIfPresent(String.self, forKey: .llmBaseURL) ?? ""
+        self.llmModel = try container.decodeIfPresent(String.self, forKey: .llmModel) ?? ""
+        self.llmProvider = try container.decodeIfPresent(String.self, forKey: .llmProvider) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(format, forKey: .format)
+        try container.encode(qaThreshold, forKey: .qaThreshold)
+        try container.encode(chunkThreshold, forKey: .chunkThreshold)
+        try container.encode(topK, forKey: .topK)
+        try container.encode(silenceThreshold, forKey: .silenceThreshold)
+        try container.encode(qaNotesEnabled, forKey: .qaNotesEnabled)
+        try container.encode(documentsEnabled, forKey: .documentsEnabled)
+        try container.encode(codeEnabled, forKey: .codeEnabled)
+        try container.encode(appearance, forKey: .appearance)
+        try container.encode(llmBaseURL, forKey: .llmBaseURL)
+        try container.encode(llmModel, forKey: .llmModel)
+        try container.encode(llmProvider, forKey: .llmProvider)
     }
 
     /// Garante que os limiares estejam dentro de faixas válidas.
