@@ -1,0 +1,1 @@
+Quem executa e que tipo de teste é o teste de aceitação?
