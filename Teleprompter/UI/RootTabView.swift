@@ -25,16 +25,26 @@ public struct RootTabView: View {
     public static let tabs: [AppTab] = [.chat, .material, .ensaio, .ajustes]
 
     @State private var selectedTab: AppTab = .chat
+    private let environment: AppEnvironment
 
-    public init() {}
+    public init() {
+        self.environment = AppEnvironment()
+    }
+
+    init(environment: AppEnvironment) {
+        self.environment = environment
+    }
 
     public var body: some View {
         TabView(selection: $selectedTab) {
-            ChatPlaceholderView()
-                .tabItem {
-                    Label(AppTab.chat.title, systemImage: AppTab.chat.iconName)
-                }
-                .tag(AppTab.chat)
+            ChatView(
+                viewModel: environment.conversationViewModel,
+                lens: environment.lens
+            )
+            .tabItem {
+                Label(AppTab.chat.title, systemImage: AppTab.chat.iconName)
+            }
+            .tag(AppTab.chat)
 
             MaterialPlaceholderView()
                 .tabItem {

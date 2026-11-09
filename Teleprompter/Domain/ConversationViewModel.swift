@@ -9,6 +9,7 @@ enum ConversationState: String, Sendable, CaseIterable, Equatable {
     case respondido
     case semMaterial
     case erro
+    case desconectado
 }
 
 /// Mensagem de troca no chat (pergunta, resposta, fontes e métricas de latência).
@@ -64,7 +65,10 @@ final class ConversationViewModel {
     var lastLatencyReport: LatencyReport?
     var errorMessage: String?
     var isListening: Bool = false
+    var isGlassesConnected: Bool = true
     var currentTranscript: String = ""
+    var pendingQuestion: String?
+    var lastLensContent: LensContent?
     var format: AnswerFormat {
         didSet {
             pipeline.format = format
@@ -113,6 +117,30 @@ final class ConversationViewModel {
         await handleQuestion(text, sttDuration: nil)
     }
 
+    /// Alterna estado de escuta contínua.
+    func toggleListening() {
+        if isListening {
+            stopListening()
+        } else {
+            startListening()
+        }
+    }
+
+    /// Ativa modo de escuta contínua.
+    func startListening() {
+        isListening = true
+        state = .ouvindo
+    }
+
+    /// Desativa modo de escuta contínua.
+    func stopListening() {
+        isListening = false
+        currentTranscript = ""
+        if state == .ouvindo {
+            state = messages.isEmpty ? .vazio : .respondido
+        }
+    }
+
     /// Entrada por áudio streaming (US-01, US-02).
     func listen(_ audio: AsyncStream<AudioBuffer>) async {
         isListening = true
@@ -126,6 +154,7 @@ final class ConversationViewModel {
         let transcripts = transcriber.transcribe(audio)
         for await transcript in transcripts {
             guard !Task.isCancelled else { break }
+            guard isListening else { break }
             currentTranscript = transcript.text
             let trimmed = transcript.text.trimmingCharacters(in: .whitespacesAndNewlines)
             let now = clock.now()
@@ -162,11 +191,18 @@ final class ConversationViewModel {
         guard !trimmed.isEmpty else { return }
 
         state = .pensando
+        pendingQuestion = trimmed
         errorMessage = nil
+        defer { pendingQuestion = nil }
 
         do {
             let result = try await pipeline.ask(trimmed, sttDuration: sttDuration)
             lastLatencyReport = result.latency
+            lastLensContent = LensContent(
+                question: trimmed,
+                body: result.formattedBody,
+                sources: result.sources
+            )
             let message = ChatMessage(
                 question: trimmed,
                 answer: result.text,
