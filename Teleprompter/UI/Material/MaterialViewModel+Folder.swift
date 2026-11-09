@@ -37,7 +37,22 @@ extension MaterialViewModel {
 
         cleanupOldFolderFiles(currentPaths: Set(scan.validFiles.map(\.relativePath)))
 
+        // O acesso à pasta escolhida vale só enquanto o escopo está aberto: sem isto o iOS nega a leitura de cada arquivo.
+        let isAccessing = scan.folderURL.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessing { scan.folderURL.stopAccessingSecurityScopedResource() }
+        }
+
         let (stats, newlyIndexed) = await indexScannedFiles(scan: scan)
+
+        if totalFiles > 0, newlyIndexed.isEmpty {
+            let err = (
+                title: "Não consegui ler os arquivos de \"\(scan.folderName)\".",
+                message: "Nenhum arquivo foi indexado. Escolha a pasta de novo."
+            )
+            updateFolderState(activeState: .pastaErro, error: err)
+            return
+        }
         indexedFolderFilePaths = newlyIndexed
 
         let newFolderSources = makeFolderSources(scan: scan, stats: stats)

@@ -107,6 +107,25 @@ final class MaterialFolderViewModelTests: XCTestCase {
         XCTAssertEqual(ctx.fakeIndex.indexed.count, 2)
     }
 
+    func testConfirmFolderImportWithNoReadableFileShowsError() async {
+        let ctx = makeContext()
+        let folderURL = URL(fileURLWithPath: "/workspace/inexistente")
+        let fileURL = folderURL.appendingPathComponent("docs/PRD.md")
+        let file = ScannedFile(relativePath: "docs/PRD.md", url: fileURL, kind: .document, size: 500)
+        ctx.fakeScanner.resultToReturn = FolderScanResult(
+            folderName: "inexistente",
+            folderURL: folderURL,
+            validFiles: [file],
+            ignoredFiles: []
+        )
+
+        await ctx.viewModel.selectFolder(url: folderURL)
+        await ctx.viewModel.confirmFolderImport()
+
+        XCTAssertEqual(ctx.viewModel.screenState.kind, .pastaErro)
+        XCTAssertTrue(ctx.fakeIndex.indexed.isEmpty)
+    }
+
     func testSelectFolderErrorTransitionsToPastaErro() async {
         let ctx = makeContext()
         let folderURL = URL(fileURLWithPath: "/workspace/sem_permissao")
