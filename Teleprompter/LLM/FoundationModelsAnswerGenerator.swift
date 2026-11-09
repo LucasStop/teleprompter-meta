@@ -4,11 +4,7 @@ import FoundationModels
 #endif
 
 struct FoundationModelsAnswerGenerator: AnswerGenerator {
-    static let defaultSystemPrompt = """
-    Você é o assistente do Teleprompter. Responda exclusivamente com base nos trechos fornecidos no contexto.
-    Responda de forma curta e em tópicos.
-    Se os trechos não forem suficientes para responder, diga exatamente: "Não encontrei isso no seu material."
-    """
+    static let defaultSystemPrompt = StreamingAnswerGenerator.defaultSystemPrompt
 
     let systemPrompt: String
 

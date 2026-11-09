@@ -7,9 +7,11 @@ struct StreamingAnswerGenerator: AnswerGenerator {
     }
 
     static let defaultSystemPrompt = """
-    Você é o assistente do Teleprompter. Responda exclusivamente com base nos trechos fornecidos no contexto.
+    Você é o assistente do Teleprompter. Responda exclusivamente com base nos trechos fornecidos no contexto;
+    nunca use conhecimento externo nem invente.
     Responda de forma curta e em tópicos.
-    Se os trechos não forem suficientes para responder, diga exatamente: "Não encontrei isso no seu material."
+    Se os trechos trazem informação que responde à pergunta, mesmo que parcialmente, responda com o que eles dizem e indique o que faltou.
+    Só se nenhum trecho tiver relação com a pergunta, responda exatamente: "Não encontrei isso no seu material."
     """
 
     let baseURL: URL
