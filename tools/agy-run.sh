@@ -17,6 +17,7 @@ if [ ! -d "$wt" ]; then
   git -C "$repo" worktree add -q "$wt" "$branch"
 fi
 cd "$wt"
+mkdir -p docs/agentes && cp -n "$brief" "docs/agentes/$(basename "$brief")" 2>/dev/null || true
 
 args=(-p "$(cat "$brief")" --model "$MODEL" --mode "$MODE" --add-dir "$wt" --output-format text)
 [ "${AGY_SKIP:-}" = 1 ] && args+=(--dangerously-skip-permissions)
