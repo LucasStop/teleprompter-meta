@@ -3,7 +3,7 @@
 # As chaves vêm do ambiente de quem roda; o script nunca as imprime.
 #
 # Uso (no seu terminal):
-#   export OPENROUTER_API_KEY=...   # opcional: perfis via OpenRouter
+#   OPENROUTER_API_KEY=... no .env da raiz ou exportado  # opcional: perfis via OpenRouter
 #   export GROQ_API_KEY=...         # opcional: Groq direto
 #   export ANTHROPIC_API_KEY=...    # opcional: Anthropic direto
 #   export OPENAI_API_KEY=...       # opcional: OpenAI direto
@@ -11,6 +11,10 @@
 # Modelos sobrescrevíveis: OR_HAIKU_MODEL, OR_OPENAI_MODEL, GROQ_MODEL, ANTHROPIC_MODEL, OPENAI_MODEL.
 # Confira os ids no catálogo de cada provedor antes de rodar.
 set -euo pipefail
+
+# Carrega o .env da raiz (ignorado pelo git) sem imprimir nada dele.
+cd "$(dirname "$0")/.."
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
 
 UDID="${1:-$(xcrun devicectl list devices 2>/dev/null | awk '/physical/ && /connected/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-[0-9A-F]{16}$/) print $i}' | head -1)}"
 TEAM="${DEVELOPMENT_TEAM:-69D4S5TF8S}"
