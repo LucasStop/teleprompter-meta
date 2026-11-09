@@ -16,10 +16,13 @@ App iOS pessoal que ouve perguntas da banca, busca no meu material e mostra a re
 
 Perfil: monolito · Stack: Swift (SwiftUI, XcodeGen)
 
+## Estado atual
+Fase 2 concluída sem hardware: aplicativo funcional no simulador iPhone 17 (iOS 17.2+) com 4 abas (Chat, Material, Ensaio, Ajustes), modal de lente simulada 600x600, pipeline local com RAG fechado, persistência SQLite e 186 testes automatizados verdes. Integração com óculos reais (Meta Ray-Ban Display via DAT SDK) e Neural Band aguardam hardware físico nas fases 3 a 5.
+
 ## Requisitos
 - Swift 6, iOS 17.2+, Xcode 26.4+, XcodeGen, SwiftLint
 
-## Começando
+## Como rodar
 ```bash
 brew install xcodegen swiftlint && xcodegen generate
 cp .env.example .env   # preencher valores; nunca commitar .env

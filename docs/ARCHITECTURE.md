@@ -12,23 +12,53 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 ## 2. Partes do sistema
 
-| Parte | Responsabilidade | Tecnologia | Dono / pasta | Depende de | Dado sensível? |
-|---|---|---|---|---|---|
-| Interface iPhone | Chat (mensagens, texto, microfone), conversas, configurações, importação, ensaio, lente simulada | SwiftUI | `App/UI` | Domínio | Não |
-| Conversa | Orquestra entradas (texto, microfone, escuta contínua), mensagens e fontes | Swift puro (ViewModel) | `App/Domain` | Retrieval, STT | Não |
-| Audio | Captura do microfone (iPhone ou HFP dos óculos) | AVAudioEngine | `App/Audio` | - | Sim (voz) |
-| STT | Transcrição em streaming e download on-demand de asset de fala (SpeechAssetManager) | SpeechAnalyzer ou alternativa (ADR-003) | `App/STT` | Audio | Sim |
-| QuestionDetector | Detecta fim da pergunta | Swift puro | `App/Domain` | STT | Não |
-| Retrieval | Busca em Q&A, documentos e código | SQLite FTS5 + embeddings (ADR-0006) | `App/Retrieval` | Persistência | Não |
-| LLM | Resposta com streaming a partir do contexto | Provedor externo (ADR-005) | `App/LLM` | Retrieval | Sim (pergunta enviada) |
-| ResponseFormatter | Ajusta ao formato e ao limite da lente | Swift puro | `App/Domain` | LLM, Retrieval | Não |
-| Lens (protocolo) | Saída da resposta | `SimulatedLens` e `GlassesLens` | `App/Lens` | Formatter | Não |
-| Glasses | Isola o DAT SDK: registro, microfone, display, gestos | MWDATCore, MWDATDisplay | `App/Glasses` | DAT SDK | Não |
-| Persistência | Configurações, índice, notas de Q&A, conversas | SQLite3 do sistema / Arquivos | `App/Storage` | - | Sim (perguntas e respostas salvas) |
-| Segredos | Chave do LLM | Keychain | `App/Storage` | - | Sim |
-| Infra e CI | Build e testes | XcodeGen, GitHub Actions macOS, lefthook | `.github`, `project.yml` | - | - |
+| Parte | Responsabilidade | Tecnologia | Dono / pasta | Depende de | Dado sensível? | Status |
+|---|---|---|---|---|---|---|
+| Interface iPhone | Chat (mensagens, texto, microfone), conversas, configurações, importação, ensaio, lente simulada | SwiftUI | `Teleprompter/UI` | Domínio | Não | Implementado (T01 a T05, T07) |
+| Conversa | Orquestra entradas (texto, microfone, escuta contínua), mensagens e fontes | Swift puro (ViewModel) | `Teleprompter/Domain` | Retrieval, STT | Não | Implementado |
+| Audio | Captura do microfone (iPhone ou HFP dos óculos) | AVAudioEngine | `Teleprompter/Audio` | - | Sim (voz) | Implementado (microfone do iPhone e arquivos) |
+| STT | Transcrição em streaming e download on-demand de asset de fala (SpeechAssetManager) | SpeechAnalyzer ou alternativa (ADR-003) | `Teleprompter/STT` | Audio | Sim | Implementado (on-device pt-BR) |
+| QuestionDetector | Detecta fim da pergunta | Swift puro | `Teleprompter/Domain` | STT | Não | Implementado |
+| Retrieval | Busca em Q&A, documentos e código | SQLite FTS5 + BM25 (ADR-0006) | `Teleprompter/Retrieval` | Persistência | Não | Implementado |
+| LLM | Resposta com streaming a partir do contexto | Provedor externo (ADR-005) | `Teleprompter/LLM` | Retrieval | Sim (pergunta enviada) | Implementado (OpenAI e Anthropic SSE) |
+| ResponseFormatter | Ajusta ao formato e ao limite da lente | Swift puro | `Teleprompter/Domain` | LLM, Retrieval | Não | Implementado |
+| Lens (protocolo) | Saída da resposta | `SimulatedLens` e `GlassesLens` | `Teleprompter/Lens` | Formatter | Não | Implementado (SimulatedLens); GlassesLens pendente |
+| Glasses | Isola o DAT SDK: registro, microfone, display, gestos | MWDATCore, MWDATDisplay | `Teleprompter/Glasses` | DAT SDK | Não | Não implementado (fase 3) |
+| Persistência | Configurações, índice, notas de Q&A, conversas | SQLite3 do sistema / UserDefaults | `Teleprompter/Storage` | - | Sim (perguntas e respostas salvas) | Implementado (ConversationStore e SettingsStore) |
+| Segredos | Chave do LLM | Keychain | `Teleprompter/Storage` | - | Sim | Implementado (KeychainStore) |
+| Infra e CI | Build e testes | XcodeGen, GitHub Actions macOS, lefthook | `.github`, `project.yml` | - | - | Implementado |
 
 Sem backend próprio, sem jobs/filas, sem autenticação de usuário.
+
+### 2.1. Estado de implementação por componente
+
+#### O que está implementado:
+- Interface iPhone (SwiftUI): casca de navegação `RootTabView` com 4 abas (Chat, Material, Ensaio, Ajustes); tela de Chat T02 (`ChatView`), importação de material T04 (`MaterialView`), ensaio T05 (`EnsaioView`), configurações T03 (`SettingsView`), lista de conversas T07 (`ConversationsView`) e modal de lente simulada T01 (`SimulatedLensModalView`, `LensView`).
+- Composição com `AppEnvironment`: injeção de dependência centralizada em `AppEnvironment` com fábricas `production()` (componentes com SQLite persistente, microfone real e SpeechAnalyzer) e `preview()` / `test()` (doubles em memória isolados sem I/O de disco).
+- Conversa e Domínio: `ConversationViewModel`, `AnswerPipeline`, modelos de domínio (`Models.swift`), relatórios de latência (`LatencyReport.swift`).
+- Audio: `MicrophoneAudioSource` (captura do microfone local via AVAudioEngine em 16 kHz / 8 kHz) e `FileAudioSource` (decodificação de arquivos WAV).
+- STT: `SpeechAnalyzerTranscriber` (transcrição contínua com SpeechAnalyzer para pt-BR), `SpeechAssetManager` (`SystemSpeechAssetManager`), cálculo de `WordErrorRate`.
+- QuestionDetector: protocolo `QuestionDetector` e implementação `PauseQuestionDetector` com detecção de silêncio após fala.
+- Retrieval: `LocalRetriever` com índice SQLite FTS5 e ranking BM25, `Embedder` com vetorização de texto, `MaterialImporter` para chunking e indexação de arquivos de texto e código, `ProductionAppRetriever` e `QANoteOnlyRetriever`.
+- LLM: protocolo `AnswerGenerator` e implementação `StreamingAnswerGenerator` com suporte a Server-Sent Events (SSE) para APIs compatíveis com OpenAI e Anthropic, injeção de contexto RAG e autenticação via Bearer token.
+- Formatter: protocolo `ResponseFormatter` e implementação `LensFormatter` com formatação em bullets curtos, palavras-chave e texto corrido, respeitando a grade de 5 linhas por 28 colunas da lente 600x600.
+- Lens: protocolo `Lens`, implementação observável `SimulatedLens` e componente visual `LensView` com design escuro de alto contraste.
+- Persistência: `ConversationStore` com backend SQLite persistente (`SQLiteConversationStore` com WAL e migrações versionadas) e em memória (`InMemoryConversationStore`); `SettingsStore` com backend `UserDefaultsSettingsStore` e `InMemorySettingsStore`.
+- Segredos: protocolo `SecretStore` com implementação segura `KeychainStore` sobre a Keychain do iOS e `InMemorySecretStore` para testes.
+
+#### O que NÃO está implementado (fases 3 a 5):
+- Módulo `Glasses` e Meta DAT SDK: módulos `MWDATCore` e `MWDATDisplay` ainda não integrados; dependência ausente em `project.yml`.
+- Óculos reais (Meta Ray-Ban Display): pareamento físico, microfone HFP a 8 kHz via Bluetooth dos óculos e saída no prisma óptico do display (fase 3).
+- Tela T06 (Pareamento e estado dos óculos): interface conectada ao hardware físico do DAT SDK (fase 3).
+- Meta Neural Band: detecção de gestos para repetição ou descarte de resposta (fase 4).
+
+### 2.2. Decisões arquiteturais tomadas no código
+
+- Caminho Q&A sem LLM quando não há chave: quando a chave de API não está presente no Keychain ou a URL/modelo do provedor não estão configurados, `AppEnvironment.makeGenerator` retorna `nil`. O pipeline opera em modo restrito a Q&A sem gerar erro de rede: se houver nota de Q&A correspondente, ela é entregue diretamente; se houver apenas trechos gerais de documentos, o resultado é esvaziado para responder a mensagem padrão "Não encontrei isso no seu material." (RAG estrito).
+- `QANoteOnlyRetriever`: decorador estrutural que envolve qualquer instância de `Retriever`. Quando ativo, descarta trechos de documentos e código (`chunks = []`), preservando exclusivamente correspondências com notas de Q&A preparadas (`qaNote`). Usado quando o gerador de LLM não está configurado, protegendo o apresentador contra respostas incompletas sem modelo.
+- Limiares relidos dinamicamente por pergunta: em cada pergunta processada no chat (`ConversationViewModel.handleQuestion`), a chamada `resolvePipeline()` recarrega as opções do `SettingsStore`. O limiar de silêncio do `PauseQuestionDetector`, o formato de exibição da resposta e o provedor de LLM são atualizados em tempo de execução sem exigir reinício do app.
+- `ProductionAppRetriever`: adaptador thread-safe que une o protocolo de busca `Retriever` e o protocolo de indexação `MaterialIndexable`. Gerencia o ciclo de vida do `LocalRetriever` sobre banco SQLite no diretório Application Support da aplicação, relendo os limiares de busca (`qaThreshold`, `chunkThreshold`, `topK`) sob lock e recriando a instância subjacente quando as configurações do usuário são alteradas na tela T03.
+- Composição `AppEnvironment`: separação clara entre a fábrica `production()` (usada no lançamento do app pelo `TeleprompterApp`) e as fábricas `preview()` e `test()` (usadas nos previews do SwiftUI e na suíte de testes de integração `AppEnvironmentIntegrationTests`), garantindo isolamento hermético entre ambiente de produção e fixtures de desenvolvimento.
 
 ## 3. Diagrama
 
