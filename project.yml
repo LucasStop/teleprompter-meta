@@ -27,6 +27,10 @@ targets:
     sources:
       - path: TeleprompterTests
         excludes: ["Fixtures/**"]
+      # Áudios e transcrições do WERHarnessTests: no iPhone físico o caminho do código-fonte não existe.
+      - path: TeleprompterTests/Fixtures/perguntas
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: Teleprompter
     settings:
