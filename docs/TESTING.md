@@ -28,7 +28,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 "Roda em": local (pré-commit ou sob demanda), PR (CI bloqueante), deploy (smoke pós-deploy), nightly (agendado).
 
 ## 3. Testes do projeto inteiro
-- Estático: SwiftLint + compilador com warnings como erro + gitleaks, no `lefthook.yml` e no CI.
+- Estático: SwiftLint + compilador com warnings como erro + gitleaks (`gitleaks detect --source . --redact --no-banner --config .gitleaks.toml`), no `lefthook.yml` e no job `gitleaks` do CI.
 - Smoke: o app compila e o pipeline com fakes devolve uma resposta na lente simulada; primeiro job do CI.
 - Regressão: a suíte completa roda em todo PR. Bug corrigido entra com teste que falha antes da correção, no mesmo PR.
 - Aceitação: cada história do `PRD.md` tem ao menos um teste (ou checagem manual descrita) ligado ao critério de aceite. Mapa em [Rastreabilidade](#5-rastreabilidade).
@@ -41,7 +41,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 - Dependência externa nunca é real nos testes automatizados de PR: usar fake, stub ou servidor de teste. Produção nunca.
 - Dados de teste: fixtures (áudios das 30 perguntas e corpus de Q&A de exemplo), sem dado pessoal real.
 - Flaky: corrigir ou quarentenar com issue em até 1 semana; nunca reexecutar até passar.
-- Cobertura: gate de 80% sobre QuestionDetector, Retrieval e ResponseFormatter. Cobertura é alarme, não meta.
+- Cobertura: gate de 80% ponderado por grupo sobre QuestionDetector (`QuestionDetector`, `PauseQuestionDetector`), Retrieval (`Retrieval/*`) e ResponseFormatter (`ResponseFormatter`, `LensFormatter`), verificado via `tools/coverage-gate.sh`. Cobertura é alarme, não meta.
 - Teste visual/E2E de tela referencia o protótipo aprovado em `design/telas.md`.
 
 ## 5. Rastreabilidade
@@ -71,6 +71,14 @@ xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=i
 xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'     # XCUITest: smoke e acessibilidade (CI)
 maestro test .maestro/    # fluxo de telas contra os protótipos aprovados (local, antes de cada gate)
 swiftlint --strict    # estático
+
+# Detecção de segredos (gitleaks):
+gitleaks detect --source . --redact --no-banner --config .gitleaks.toml
+
+# Testes com cobertura e validação do gate (80% no núcleo: detector, retrieval, formatter):
+xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -enableCodeCoverage YES -resultBundlePath build.noindex/Test.xcresult -derivedDataPath build.noindex
+./tools/coverage-gate.sh build.noindex/Test.xcresult
+# Ajuste do limiar mínimo (padrão 80%): COVERAGE_MIN=85 ./tools/coverage-gate.sh build.noindex/Test.xcresult
 
 # Harness de WER (STT real sobre perguntas gravadas):
 RUN_STT=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/WERHarnessTests
