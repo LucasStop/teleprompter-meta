@@ -106,7 +106,7 @@ public struct MessageBubble: View {
     }
 
     /// Renderiza negrito/itálico/código do markdown inline; texto sem markdown válido volta como está.
-    static func markdown(_ string: String) -> AttributedString {
+    nonisolated static func markdown(_ string: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         return (try? AttributedString(markdown: string, options: options)) ?? AttributedString(string)
     }
