@@ -65,7 +65,7 @@ public struct RootTabView: View {
             }
             .tag(AppTab.chat)
 
-            MaterialPlaceholderView()
+            MaterialView(viewModel: environment.materialViewModel)
                 .tabItem {
                     Label(AppTab.material.title, systemImage: AppTab.material.iconName)
                 }
@@ -77,7 +77,7 @@ public struct RootTabView: View {
                 }
                 .tag(AppTab.ensaio)
 
-            AjustesPlaceholderView()
+            SettingsView(viewModel: environment.settingsViewModel)
                 .tabItem {
                     Label(AppTab.ajustes.title, systemImage: AppTab.ajustes.iconName)
                 }

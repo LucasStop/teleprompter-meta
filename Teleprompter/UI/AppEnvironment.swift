@@ -11,11 +11,18 @@ final class AppEnvironment {
     let conversationViewModel: ConversationViewModel
     let conversationStore: any ConversationStore
     let conversationsViewModel: ConversationsViewModel
+    let settingsStore: any SettingsStore
+    let secretStore: any SecretStore
+    let settingsViewModel: SettingsViewModel
+    let materialViewModel: MaterialViewModel
 
     init(
         lens: SimulatedLens = SimulatedLens(),
         conversationViewModel: ConversationViewModel? = nil,
-        conversationStore: (any ConversationStore)? = nil
+        conversationStore: (any ConversationStore)? = nil,
+        settingsStore: (any SettingsStore)? = nil,
+        secretStore: (any SecretStore)? = nil,
+        materialViewModel: MaterialViewModel? = nil
     ) {
         let lensInstance = lens
         self.lens = lensInstance
@@ -38,10 +45,19 @@ final class AppEnvironment {
         self.conversationStore = store
         self.conversationsViewModel = ConversationsViewModel(store: store)
 
+        let effectiveSettingsStore: any SettingsStore = settingsStore ?? UserDefaultsSettingsStore()
+        let effectiveSecretStore: any SecretStore = secretStore ?? KeychainStore()
+        self.settingsStore = effectiveSettingsStore
+        self.secretStore = effectiveSecretStore
+        self.settingsViewModel = SettingsViewModel(
+            settingsStore: effectiveSettingsStore,
+            secretStore: effectiveSecretStore
+        )
+
+        let retriever = InMemoryAppRetriever()
         if let conversationViewModel {
             self.conversationViewModel = conversationViewModel
         } else {
-            let retriever = InMemoryAppRetriever()
             let generator = InMemoryAppGenerator()
             let transcriber = InMemoryAppTranscriber()
             let detector = PauseQuestionDetector(silenceThreshold: 1.2)
@@ -55,13 +71,22 @@ final class AppEnvironment {
                 format: .bullets
             )
         }
+
+        if let materialViewModel {
+            self.materialViewModel = materialViewModel
+        } else {
+            self.materialViewModel = MaterialViewModel(indexable: retriever)
+        }
     }
 }
 
 // MARK: - InMemory Doubles para o AppEnvironment
 
 /// Recuperador em memória com dados mockados para o protótipo da sessão.
-struct InMemoryAppRetriever: Retriever, Sendable {
+struct InMemoryAppRetriever: Retriever, MaterialIndexable, Sendable {
+    func index(_ items: [IndexedChunk]) throws {}
+    func removeSource(_ path: String) throws {}
+
     func retrieve(_ question: String) async throws -> Retrieval {
         let lower = question.lowercased()
 

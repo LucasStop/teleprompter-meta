@@ -8,6 +8,10 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 - Banco: sem servidor. SQLite com FTS5 e tabela de embeddings, gerado por `Tools/Indexer` (ADR-0006, proposta); configurações em arquivo local · Cache/fila: N/A · Arquivos: material importado e índice.
 - Ambientes: local e iPhone; teste com diretório temporário por execução. Sem produção separada.
 
+### Configurações e Segredos (`SettingsStore` e `SecretStore`)
+- Configurações gerais (`SettingsStore`): armazenadas via `UserDefaultsSettingsStore` sob a chave `br.com.lucasstop.teleprompter.settings` como JSON codificado da struct `Settings`. Não contém segredos.
+- Chave de API de LLM (`SecretStore`): armazenada exclusivamente no Keychain via `KeychainStore` sob a chave `llm.apiKey` (serviço `br.com.lucasstop.teleprompter`). Nunca gravada em `UserDefaults`, arquivos de log ou transitada em texto plano pela interface.
+
 ### Esquema SQLite do Índice Local (`LocalRetriever`)
 - Tabela `chunks`:
   - `id INTEGER PRIMARY KEY AUTOINCREMENT`: chave primária interna do trecho.
@@ -44,6 +48,7 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 | Entidade | Responsabilidade | Chave | Relações | Dado pessoal? |
 |---|---|---|---|---|
 | Settings | Formato de resposta, limiares do detector, fontes ativas | única | - | Não |
+| MaterialSource | Fonte de material importada (Q&A, README, doc, código) | path | tem Chunks no LocalRetriever | Não |
 | QANote | Pergunta esperada e resposta preparada | id | pertence a um Material | Não |
 | Document | README e documentos importados | id | tem Chunks | Não |
 | CodeFile | Arquivo do repositório indexado | caminho + commit | tem Chunks | Não |
@@ -51,6 +56,17 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 | Conversation | Conversa do chat | id | tem Messages | Sim (texto das perguntas e respostas) |
 | Message | Pergunta ou resposta, com fontes e latência | id | pertence a uma Conversation; cita Chunks | Sim |
 | Session | Registro opcional de ensaio (latência por etapa, sem a fala) | id | - | Não |
+
+### Formato de Notas Q&A (`MaterialImporter`)
+O `MaterialImporter` reconhece dois formatos de notas de Q&A para indexação direta como `kind = .qa`:
+1. **Formato P: / R:**
+   - Prefixos de pergunta: `P:`, `Pergunta:`, `Q:`
+   - Prefixos de resposta: `R:`, `Resposta:`, `A:`
+   - Suporta respostas com múltiplas linhas e múltiplos pares por arquivo separados por linhas em branco.
+2. **Formato Front Matter:**
+   - Bloco delimitado por `---` contendo `pergunta: <texto>` ou `question: <texto>` e corpo como resposta preparada.
+
+Arquivos de texto sem formato Q&A são quebrados via `MaterialChunker` por parágrafo/seção com sobreposição de contexto, classificados como `.code` (extensões de código como `.swift`, `.ts`, `.php`) ou `.document` (`.md`, `.txt`). Reimportação da mesma fonte substitui os trechos antigos atomicamente sem duplicar.
 
 ## 3. Regras de integridade
 - Índice reconstruível a partir das fontes: pode ser descartado sem perda.

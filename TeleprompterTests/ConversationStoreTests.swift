@@ -3,7 +3,6 @@ import SQLite3
 import XCTest
 @testable import Teleprompter
 
-// swiftlint:disable:next type_body_length
 final class ConversationStoreTests: XCTestCase {
     private var tempDirectory: URL!
 
@@ -183,66 +182,6 @@ final class ConversationStoreTests: XCTestCase {
         XCTAssertTrue(list.isEmpty)
     }
 
-    private func countRowsInTable(_ tableName: String, databaseURL: URL) throws -> Int {
-        var dbPointer: OpaquePointer?
-        guard sqlite3_open(databaseURL.path, &dbPointer) == SQLITE_OK, let dbPointer else {
-            return -1
-        }
-        defer { sqlite3_close(dbPointer) }
-        var stmt: OpaquePointer?
-        let sql = "SELECT COUNT(*) FROM \(tableName);"
-        guard sqlite3_prepare_v2(dbPointer, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
-            return -1
-        }
-        defer { sqlite3_finalize(stmt) }
-        if sqlite3_step(stmt) == SQLITE_ROW {
-            return Int(sqlite3_column_int(stmt, 0))
-        }
-        return 0
-    }
-
-    func testReopenedDatabaseEnforcesForeignKeyCascadeOnDeleteAndCountIsZero() async throws {
-        let dbURL = tempDirectory.appendingPathComponent("reopen_cascade.sqlite")
-
-        // 1. Abre a conexão inicial (user_version vai de 0 para 1) e salva conversas com mensagens
-        var store: SQLiteConversationStore? = try SQLiteConversationStore(databaseURL: dbURL)
-        let conversation1 = Conversation(
-            title: "Conversa 1",
-            messages: [
-                Message(role: .question, text: "Pergunta 1"),
-                Message(role: .answer, text: "Resposta 1")
-            ]
-        )
-        let conversation2 = Conversation(
-            title: "Conversa 2",
-            messages: [
-                Message(role: .question, text: "Pergunta 2"),
-                Message(role: .answer, text: "Resposta 2")
-            ]
-        )
-        try await store?.save(conversation1)
-        try await store?.save(conversation2)
-
-        var rawMessageCount = try countRowsInTable("messages", databaseURL: dbURL)
-        XCTAssertEqual(rawMessageCount, 4)
-
-        // 2. Fecha o store inicial (simula reinicialização do app)
-        store = nil
-
-        // 3. Reabre o store com user_version já igual a 1
-        let reopenedStore = try SQLiteConversationStore(databaseURL: dbURL)
-
-        // 4. Apaga conversation1 e valida que o cascade deletou as mensagens órfãs no SQLite
-        try await reopenedStore.delete(id: conversation1.id)
-        rawMessageCount = try countRowsInTable("messages", databaseURL: dbURL)
-        XCTAssertEqual(rawMessageCount, 2)
-
-        // 5. Apaga todas as conversas e valida que a contagem de mensagens no SQLite é 0
-        try await reopenedStore.deleteAll()
-        rawMessageCount = try countRowsInTable("messages", databaseURL: dbURL)
-        XCTAssertEqual(rawMessageCount, 0)
-    }
-
     func testSchemaVersionAndReversibleMigration() async throws {
         let store = try makeStore()
 
@@ -330,5 +269,64 @@ final class ConversationStoreTests: XCTestCase {
         try await store.delete(id: conv.id)
         let listFinal = try await store.list()
         XCTAssertTrue(listFinal.isEmpty)
+    }
+}
+
+// MARK: - Regressão de Reabertura de Conexão e Cascata
+
+extension ConversationStoreTests {
+    private func countRowsInTable(_ tableName: String, databaseURL: URL) throws -> Int {
+        var dbPointer: OpaquePointer?
+        guard sqlite3_open(databaseURL.path, &dbPointer) == SQLITE_OK, let dbPointer else {
+            return -1
+        }
+        defer { sqlite3_close(dbPointer) }
+        var stmt: OpaquePointer?
+        let sql = "SELECT COUNT(*) FROM \(tableName);"
+        guard sqlite3_prepare_v2(dbPointer, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
+            return -1
+        }
+        defer { sqlite3_finalize(stmt) }
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            return Int(sqlite3_column_int(stmt, 0))
+        }
+        return 0
+    }
+
+    func testReopenedDatabaseEnforcesForeignKeyCascadeOnDeleteAndCountIsZero() async throws {
+        let dbURL = tempDirectory.appendingPathComponent("reopen_cascade.sqlite")
+
+        var store: SQLiteConversationStore? = try SQLiteConversationStore(databaseURL: dbURL)
+        let conversation1 = Conversation(
+            title: "Conversa 1",
+            messages: [
+                Message(role: .question, text: "Pergunta 1"),
+                Message(role: .answer, text: "Resposta 1")
+            ]
+        )
+        let conversation2 = Conversation(
+            title: "Conversa 2",
+            messages: [
+                Message(role: .question, text: "Pergunta 2"),
+                Message(role: .answer, text: "Resposta 2")
+            ]
+        )
+        try await store?.save(conversation1)
+        try await store?.save(conversation2)
+
+        var rawMessageCount = try countRowsInTable("messages", databaseURL: dbURL)
+        XCTAssertEqual(rawMessageCount, 4)
+
+        store = nil
+
+        let reopenedStore = try SQLiteConversationStore(databaseURL: dbURL)
+
+        try await reopenedStore.delete(id: conversation1.id)
+        rawMessageCount = try countRowsInTable("messages", databaseURL: dbURL)
+        XCTAssertEqual(rawMessageCount, 2)
+
+        try await reopenedStore.deleteAll()
+        rawMessageCount = try countRowsInTable("messages", databaseURL: dbURL)
+        XCTAssertEqual(rawMessageCount, 0)
     }
 }
