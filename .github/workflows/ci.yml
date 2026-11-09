@@ -52,6 +52,13 @@ jobs:
           fi
           echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
 
+      - name: Cache do DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ hashFiles('Teleprompter/**', 'TeleprompterTests/**', 'TeleprompterUITests/**', 'project.yml') }}
+          restore-keys: deriveddata-${{ runner.os }}-
+
       - name: Testes
         run: xcodebuild test -scheme "$SCHEME" -destination "id=$SIM_UDID" -enableCodeCoverage YES -resultBundlePath build/Test.xcresult
         env:
