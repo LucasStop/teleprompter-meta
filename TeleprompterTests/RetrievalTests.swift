@@ -61,7 +61,7 @@ final class RetrievalTests: XCTestCase {
         XCTAssertEqual(result.qaNote?.source.path, "qa/apresentacao.md")
         XCTAssertTrue(result.chunks.isEmpty)
 
-        let gen = FakeGenerator(), lens = SimulatedLens()
+        let gen = FakeGenerator(), lens = RecordingLens()
         let pipeline = AnswerPipeline(
             retriever: retriever,
             generator: gen,
@@ -109,7 +109,7 @@ final class RetrievalTests: XCTestCase {
         XCTAssertTrue(result.chunks.isEmpty)
         XCTAssertTrue(result.isEmpty)
 
-        let gen = FakeGenerator(), lens = SimulatedLens()
+        let gen = FakeGenerator(), lens = RecordingLens()
         let pipeline = AnswerPipeline(
             retriever: retriever,
             generator: gen,
