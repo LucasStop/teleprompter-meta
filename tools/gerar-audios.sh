@@ -74,9 +74,12 @@ tratar_erro_http() {
             echo "  Verifique sua chave no console da ElevenLabs." >&2
             ;;
         402)
-            echo "Erro 402 (Créditos insuficientes) ao $context:" >&2
-            echo "  A conta ElevenLabs não possui créditos de caracteres suficientes." >&2
-            echo "  Verifique sua cota em https://elevenlabs.io/app/usage" >&2
+            echo "Erro 402 (Pagamento necessário) ao $context:" >&2
+            if command -v jq >/dev/null 2>&1 && [ -f "$body_file" ]; then
+                jq -r '.detail.message // empty' "$body_file" 2>/dev/null | sed 's/^/  /' >&2 || true
+            fi
+            echo "  Causas comuns: sem créditos de caracteres ou voz da biblioteca no plano Free." >&2
+            echo "  Cota: https://elevenlabs.io/app/usage" >&2
             ;;
         429)
             echo "Erro 429 (Limite de requisições excedido) ao $context:" >&2
