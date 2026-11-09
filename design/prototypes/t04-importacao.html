@@ -11,7 +11,7 @@
 <script src="proto.js"></script>
 <script>
 const fonte = (n, d, v) => `<div class="item"><div class="t"><b>${n}</b><span>${d}</span></div><span class="v">${v}</span></div>`;
-proto({ title: "T04 Material", tab: "Material", titulo: "Material", inicial: "padrao",
+proto({ title: "T04 Material", tab: "Material", titulo: "Material", projeto: "Plataforma de cursos", inicial: "padrao",
  estados: {
   vazio: ["Vazio", `<div class="empty"><h3>Nenhum material importado</h3><span>Importe notas de Q&amp;A, README, documentos ou o repositório. O chat só responde com isso.</span></div>`],
   padrao: ["Padrão", `<div class="badge ok"><i></i>Índice atualizado há 2 h</div><div class="sec">Fontes</div><div class="card">${fonte("Notas de Q&A", "30 perguntas", "30 itens")}${fonte("README.md", "Importado hoje", "12 trechos")}${fonte("Documentos", "PRD, ADRs, plano", "148 trechos")}${fonte("Repositório", "teleprompter-meta @ 9ac027f", "812 trechos")}</div>`],

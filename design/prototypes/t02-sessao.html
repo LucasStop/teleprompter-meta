@@ -44,6 +44,19 @@
   .tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); }
   .tabs div { min-height: 56px; display: grid; place-items: center; font-size: 12px; line-height: 16px; color: var(--muted); }
   .tabs div[aria-current] { color: var(--primary); font-weight: 600; }
+  .proj { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-size: 15px; line-height: 20px; max-width: 100%; }
+  .proj span { color: var(--muted); } .proj b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .phone { position: relative; }
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; background: var(--surface); border-top: 1px solid var(--border); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: var(--s4); display: grid; gap: var(--s3); }
+  .sheet h3 { margin: 0; font-size: 20px; line-height: 25px; }
+  .prow { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: 56px; padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--background); }
+  .prow.on { border-color: var(--primary); }
+  .prow .t { display: grid; } .prow .t span { font-size: 12px; line-height: 16px; color: var(--muted); }
+  .prow .ck { color: var(--primary); font-weight: 700; }
+  .sbtn { min-height: 44px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--background); color: var(--foreground); font: 600 17px var(--font); display: grid; place-items: center; }
+  .sbtn.pri { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+  .sbtn.dng { color: var(--danger); border-color: var(--danger); }
   .meta { font: 12px/16px var(--mono); color: var(--muted); margin-top: var(--s3); text-align: center; }
 </style>
 </head>
@@ -60,7 +73,7 @@
   </div>
 </main>
 <script>
-const estados = { vazio: "Vazio", digitando: "Digitando", ouvindo: "Escuta contínua", pensando: "Pensando", conversa: "Conversa", semmaterial: "Sem no material", erro: "Sem conexão", desconectado: "Óculos desconectados" };
+const estados = { vazio: "Vazio", digitando: "Digitando", ouvindo: "Escuta contínua", pensando: "Pensando", conversa: "Conversa", semmaterial: "Sem no material", erro: "Sem conexão", desconectado: "Óculos desconectados", projetos: "Trocar projeto", novo: "Novo projeto", excluir: "Excluir projeto" };
 const temas = { auto: "Sistema", light: "Claro", dark: "Escuro" };
 let est = "conversa", tema = "dark";
 const $ = (id) => document.getElementById(id);
@@ -72,7 +85,7 @@ const A1 = `<ul><li>DAT SDK só tem módulos Swift</li><li>Menor latência de á
 const q = (t, cls = "") => `<div class="msg q ${cls}">${t}</div>`;
 const a = (h) => `<div class="msg a">${h}</div>`;
 function badge(e) {
-  const m = { vazio: ["Pronto", ""], digitando: ["Pronto", ""], ouvindo: ["Ouvindo a banca", "act"], pensando: ["Buscando no material", "act"], conversa: ["Resposta enviada à lente", "ok"], semmaterial: ["Sem resposta no material", ""], erro: ["Sem conexão", "err"], desconectado: ["Óculos desconectados", "err"] }[e];
+  const m = { vazio: ["Pronto", ""], digitando: ["Pronto", ""], ouvindo: ["Ouvindo a banca", "act"], pensando: ["Buscando no material", "act"], conversa: ["Resposta enviada à lente", "ok"], semmaterial: ["Sem resposta no material", ""], erro: ["Sem conexão", "err"], desconectado: ["Óculos desconectados", "err"], projetos: ["Resposta enviada à lente", "ok"], novo: ["Resposta enviada à lente", "ok"], excluir: ["Resposta enviada à lente", "ok"] }[e];
   return `<span class="badge ${m[1]}"><i></i>${m[0]}</span>`;
 }
 function render() {
@@ -94,10 +107,15 @@ function render() {
   let ban = "";
   if (est === "erro") ban = `<div class="banner"><b>Sem conexão.</b> Respondendo só com as notas de Q&amp;A. Verifique a rede e tente de novo.</div>`;
   if (est === "desconectado") ban = `<div class="banner"><b>Óculos desconectados.</b> A resposta aparece só no iPhone. Reconecte pelo app Meta AI.</div>`;
+  const proj = `<div class="proj" aria-label="Projeto ativo: Plataforma de cursos"><span>Projeto</span><b>Plataforma de cursos</b><span>▾</span></div>`;
+  let overlay = "";
+  if (est === "projetos") overlay = `<div class="scrim"><div class="sheet"><h3>Projetos</h3><div class="prow on"><div class="t"><b>Plataforma de cursos</b><span>123 arquivos · 1.910 trechos · 8 conversas</span></div><span class="ck">✓</span></div><div class="prow"><div class="t"><b>Teleprompter Meta</b><span>143 arquivos · 1.265 trechos · 3 conversas</span></div></div><div class="sbtn pri">Novo projeto</div><div class="sbtn">Renomear projeto ativo</div><div class="sbtn dng">Excluir projeto ativo</div></div></div>`;
+  if (est === "novo") overlay = `<div class="scrim"><div class="sheet"><h3>Novo projeto</h3><span class="cap">Cada projeto tem a sua pasta de material e as suas conversas. Depois de criar, importe a pasta na aba Material.</span><div class="field">Nome do projeto</div><div class="sbtn pri">Criar projeto</div><div class="sbtn">Cancelar</div></div></div>`;
+  if (est === "excluir") overlay = `<div class="scrim"><div class="sheet"><h3>Excluir "Plataforma de cursos"?</h3><span>Apaga o material importado e as 8 conversas deste projeto, só neste aparelho. Não dá para desfazer.</span><div class="sbtn dng">Excluir projeto</div><div class="sbtn">Cancelar</div></div></div>`;
   const ouv = est === "ouvindo";
   const field = est === "digitando" ? `<div class="field">Como funciona a busca no mat</div>` : `<div class="field ph">${ouv ? "Ouvindo..." : "Pergunte sobre o seu material"}</div>`;
   const act = est === "digitando" ? `<div class="ib pri" aria-label="Enviar">↑</div>` : `<div class="ib ${ouv ? "rec" : ""}" aria-label="${ouv ? "Parar microfone" : "Falar"}">${ouv ? "■" : "●"}</div>`;
-  $("phone").innerHTML = `<div class="top"><div><h2>Chat</h2></div><div class="ghost">Conversas</div></div><div style="padding:0 var(--s4) var(--s2)">${badge(est)}</div>${ban}<div class="chat">${msgs}</div><div class="comp"><div class="live"><span class="tog ${ouv ? "on" : ""}"><b></b>Escuta contínua</span><span class="cap">Só material importado</span></div><div class="row">${field}${act}</div></div><nav class="tabs" aria-label="Abas"><div aria-current="page">Chat</div><div>Material</div><div>Ensaio</div><div>Ajustes</div></nav>`;
+  $("phone").innerHTML = `<div class="top"><div><h2>Chat</h2></div><div class="ghost">Conversas</div></div><div style="padding:0 var(--s4) var(--s2);display:flex;gap:var(--s2);flex-wrap:wrap;align-items:center">${proj}${badge(est)}</div>${ban}<div class="chat">${msgs}</div><div class="comp"><div class="live"><span class="tog ${ouv ? "on" : ""}"><b></b>Escuta contínua</span><span class="cap">Só material importado</span></div><div class="row">${field}${act}</div></div><nav class="tabs" aria-label="Abas"><div aria-current="page">Chat</div><div>Material</div><div>Ensaio</div><div>Ajustes</div></nav>${overlay}`;
   $("meta").textContent = `estado: ${est} · tema: ${tema} · iPhone retrato`;
 }
 btns($("estado"), estados, (k) => (est = k));
