@@ -3,6 +3,8 @@ import SwiftUI
 @main
 struct TeleprompterApp: App {
     var body: some Scene {
-        WindowGroup { Text("Teleprompter") }
+        WindowGroup {
+            RootTabView()
+        }
     }
 }

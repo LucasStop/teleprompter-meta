@@ -171,7 +171,7 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
 
     func testHTTP401Error() async throws {
         FakeLLMURLProtocol.config = .init(statusCode: 401, headers: ["Content-Type": "application/json"])
-        let tracker = ErrorTracker()
+        let tracker = LLMErrorTracker()
         let store = InMemorySecretStore(initial: ["llm_api_key": "invalid"])
         let gen = StreamingAnswerGenerator(
             baseURL: baseURL, model: model, secretStore: store, session: makeSession(), onError: { tracker.record($0) }
@@ -186,7 +186,7 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
 
     func testHTTP500Error() async throws {
         FakeLLMURLProtocol.config = .init(statusCode: 500, headers: ["Content-Type": "application/json"])
-        let tracker = ErrorTracker()
+        let tracker = LLMErrorTracker()
         let store = InMemorySecretStore(initial: ["llm_api_key": "key"])
         let gen = StreamingAnswerGenerator(
             baseURL: baseURL, model: model, secretStore: store, session: makeSession(), onError: { tracker.record($0) }
@@ -201,7 +201,7 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
 
     func testInvalidJSONYieldsInvalidResponseError() async throws {
         FakeLLMURLProtocol.config = .init(sseEvents: ["data: {invalid-json}"])
-        let tracker = ErrorTracker()
+        let tracker = LLMErrorTracker()
         let store = InMemorySecretStore(initial: ["llm_api_key": "key"])
         let gen = StreamingAnswerGenerator(
             baseURL: baseURL, model: model, secretStore: store, session: makeSession(), onError: { tracker.record($0) }
@@ -215,7 +215,7 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
     }
 
     func testMissingAPIKeyYieldsMissingKeyErrorAndNoNetworkRequest() async throws {
-        let tracker = ErrorTracker()
+        let tracker = LLMErrorTracker()
         let store = InMemorySecretStore(initial: [:])
         let gen = StreamingAnswerGenerator(
             baseURL: baseURL, model: model, secretStore: store, session: makeSession(), onError: { tracker.record($0) }
@@ -230,7 +230,7 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
     }
 
     func testNoChunksNeverCallsNetworkAndReturnsEmptyStream() async throws {
-        let tracker = ErrorTracker()
+        let tracker = LLMErrorTracker()
         let store = InMemorySecretStore(initial: ["llm_api_key": "key"])
         let gen = StreamingAnswerGenerator(
             baseURL: baseURL, model: model, secretStore: store, session: makeSession(), onError: { tracker.record($0) }
@@ -291,7 +291,7 @@ final class LLMStreamingAnswerGeneratorTests: XCTestCase {
     }
 }
 
-private final class ErrorTracker: @unchecked Sendable {
+final class LLMErrorTracker: @unchecked Sendable {
     private let lock = NSLock()
     private var _lastError: LLMError?
 
