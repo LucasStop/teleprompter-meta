@@ -19,7 +19,7 @@ struct PassthroughFormatter: ResponseFormatter {
     func format(_ text: String, as format: AnswerFormat) -> String { text }
 }
 
-actor SimulatedLens: Lens {
+actor RecordingLens: Lens {
     private(set) var shown: LensContent?
     func show(_ content: LensContent) { shown = content }
     func clear() { shown = nil }

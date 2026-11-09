@@ -5,7 +5,7 @@ final class AnswerPipelineTests: XCTestCase {
     private let src = SourceRef(path: "qa/stack.md")
 
     private func run(_ result: Retrieval) async throws -> (LensContent?, FakeGenerator) {
-        let gen = FakeGenerator(), lens = SimulatedLens()
+        let gen = FakeGenerator(), lens = RecordingLens()
         let pipeline = AnswerPipeline(
             retriever: FakeRetriever(result: result), generator: gen, formatter: PassthroughFormatter(), lens: lens
         )

@@ -43,3 +43,8 @@ Perfil: monolito · Stack: Swift (SwiftUI, XcodeGen) (ver `.projeto.yml`)
 ## Notas do projeto
 - Chave do provedor de LLM no Keychain, nunca no repo (ADR-005 a decidir). DAT SDK em developer preview: checar mudanças antes de atualizar.
 - Estrutura real: `Teleprompter/`, `TeleprompterTests/`, `TeleprompterUITests/` (ainda não criados; fase 1).
+
+## Orquestração com agy
+- Trabalho pesado (testes, código, build, correção de erro) vai para `agy` (`gemini-3.8-flash-high`) via `tools/agy-run.sh`, em worktree isolado, com brief em `docs/agentes/`. Até 2 workers em paralelo.
+- Claude só despacha, revisa (`git diff`, testes, 3 gates contra o aceite e os ADRs) e opera o GitHub: commit, push, PR. Devolve feedback ao mesmo worker até 2 rodadas; depois corrige o mínimo.
+- O worker nunca faz commit, push, merge nem `gh`, nem lê segredos. Merge só pelo Lucas. Detalhe em [docs/agentes/README.md](docs/agentes/README.md).
