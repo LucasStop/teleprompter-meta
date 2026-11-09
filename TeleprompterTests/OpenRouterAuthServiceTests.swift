@@ -47,7 +47,7 @@ final class OpenRouterAuthServiceTests: XCTestCase {
 
         XCTAssertEqual(components.host, "openrouter.ai")
         XCTAssertEqual(components.path, "/auth")
-        XCTAssertEqual(components.queryItems?.first(where: { $0.name == "callback_url" })?.value, "teleprompter://openrouter")
+        XCTAssertEqual(components.queryItems?.first(where: { $0.name == "callback_url" })?.value, OpenRouterAuthService.defaultCallbackURL)
         XCTAssertEqual(components.queryItems?.first(where: { $0.name == "code_challenge" })?.value, challenge)
         XCTAssertEqual(components.queryItems?.first(where: { $0.name == "code_challenge_method" })?.value, "S256")
     }

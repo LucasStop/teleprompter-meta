@@ -55,7 +55,7 @@ final class OpenRouterAuthService: OpenRouterAuthenticating, @unchecked Sendable
     private let baseURL: URL
     private let session: URLSession
 
-    static let defaultCallbackURL = "teleprompter://openrouter"
+    static let defaultCallbackURL = "https://lucasstop.github.io/teleprompter-meta/oauth/"
     static let defaultBaseURL = URL(string: "https://openrouter.ai")!
 
     init(

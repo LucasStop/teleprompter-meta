@@ -89,12 +89,12 @@ Endpoint compatível com chat completions (OpenAI format), consumido por `Stream
 Fluxo consumido por `OpenRouterAuthService` (issue #75) via RFC 7636 (PKCE com método S256):
 
 1. **Abertura de autorização (navegador via `ASWebAuthenticationSession`)**:
-   - **Método / URL**: `GET https://openrouter.ai/auth?callback_url=teleprompter://openrouter&code_challenge=<challenge>&code_challenge_method=S256`
+   - **Método / URL**: `GET https://openrouter.ai/auth?callback_url=https://lucasstop.github.io/teleprompter-meta/oauth/&code_challenge=<challenge>&code_challenge_method=S256`
    - **Parâmetros**:
-     - `callback_url`: URL scheme registrado da aplicação (`teleprompter://openrouter`).
+     - `callback_url`: página de relay https em GitHub Pages (`https://lucasstop.github.io/teleprompter-meta/oauth/`, fonte em `site/oauth/`), que redireciona para `teleprompter://openrouter?code=...`. O OpenRouter rejeita callback com scheme customizado e manda para a home.
      - `code_challenge`: `Base64URL(SHA256(code_verifier))` gerado localmente a partir de 32 bytes aleatórios sem padding.
      - `code_challenge_method`: `"S256"`.
-   - **Retorno**: interceptação do callback `teleprompter://openrouter?code=<code>`.
+   - **Retorno**: o relay redireciona para `teleprompter://openrouter?code=<code>`, capturado pelo `ASWebAuthenticationSession` (`callbackURLScheme: "teleprompter"`).
 
 2. **Troca do código por chave permanente de API**:
    - **Método / URL**: `POST https://openrouter.ai/api/v1/auth/keys`
