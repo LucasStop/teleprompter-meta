@@ -1,6 +1,33 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import Foundation
+import os
 import Speech
+
+/// Encapsula o buffer em tipo Sendable com lock para alimentar o AVAudioConverter de forma concorrente.
+private final class SingleBufferProvider: @unchecked Sendable {
+    private let buffer: AVAudioPCMBuffer
+    private let consumed = OSAllocatedUnfairLock(initialState: false)
+
+    init(buffer: AVAudioPCMBuffer) {
+        self.buffer = buffer
+    }
+
+    func provide(status: UnsafeMutablePointer<AVAudioConverterInputStatus>) -> AVAudioPCMBuffer? {
+        let isAlreadyConsumed = consumed.withLock { isConsumed -> Bool in
+            let previous = isConsumed
+            isConsumed = true
+            return previous
+        }
+
+        if isAlreadyConsumed {
+            status.pointee = .noDataNow
+            return nil
+        } else {
+            status.pointee = .haveData
+            return buffer
+        }
+    }
+}
 
 final class SpeechAnalyzerTranscriber: SpeechTranscriber, @unchecked Sendable {
     let locale: Locale
@@ -187,15 +214,9 @@ final class SpeechAnalyzerTranscriber: SpeechTranscriber, @unchecked Sendable {
         }
 
         var conversionError: NSError?
-        var isConsumed = false
+        let provider = SingleBufferProvider(buffer: inputBuffer)
         _ = converter.convert(to: convertedPCMBuffer, error: &conversionError) { _, outStatus in
-            if isConsumed {
-                outStatus.pointee = AVAudioConverterInputStatus.noDataNow
-                return nil
-            }
-            isConsumed = true
-            outStatus.pointee = AVAudioConverterInputStatus.haveData
-            return inputBuffer
+            provider.provide(status: outStatus)
         }
         if let conversionError = conversionError {
             throw conversionError
