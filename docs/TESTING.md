@@ -6,7 +6,7 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 ## 1. Formato da suíte
 - Formato: Troféu
-- Por quê: app único sem backend. Unitários no núcleo (detector, formatador, busca), integração com áudios gravados e fakes dos protocolos como foco, E2E só na jornada crítica pela lente simulada.
+- Por quê: app único sem backend. Unitários no núcleo (detector, formatador, busca), integração com áudios gravados e fakes dos protocolos como foco, fluxo de telas validado local com Maestro; XCUITest no CI só para smoke da jornada e acessibilidade.
 
 ## 2. Testes por parte
 
@@ -21,7 +21,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | LLM | Latência alta, contexto vazado, formato quebrado | integração com fake, contrato, desempenho | XCTest com fake de streaming; medição de primeiro token no protótipo P3 | PR | Chamada real ao provedor nunca roda no PR |
 | ResponseFormatter | Texto estoura a lente 600x600 | unitário, visual | Swift Testing; swift-snapshot-testing | local, PR | |
 | Glasses (DAT SDK) | Mudança do SDK em preview, queda de conexão | integração com Mock Device Kit, manual em campo | Mock Device Kit (não cobre display nem microfone); roteiro manual com óculos | PR (mock), manual (fases 3 a 5) | Teste automatizado com óculos reais não existe |
-| Interface iPhone e lente simulada | Estado ou variante quebrada, jornada quebrada | componente, visual, acessibilidade, E2E | XCTest das ViewModels + previews; swift-snapshot-testing; XCUITest + performAccessibilityAudit | local, PR (smoke) | E2E só na jornada pergunta -> resposta |
+| Interface iPhone e lente simulada | Estado ou variante quebrada, jornada quebrada | componente, visual, acessibilidade, E2E | XCTest das ViewModels + previews; swift-snapshot-testing; Maestro (flows YAML, fluxo entre telas T01 a T07); XCUITest (smoke pergunta -> resposta + performAccessibilityAudit) | local (Maestro), PR (XCUITest) | Maestro não roda no CI (lento e instável em runner macOS); não cobre óculos nem microfone |
 | Persistência e segredos | Perda de configuração, chave no repo | integração, segurança | XCTest com fakes de arquivo; gitleaks + revisão de Keychain | PR | Migração só se adotar SwiftData |
 | Infra / CI | Build quebrado | estático | GitHub Actions macOS, SwiftLint, gitleaks | PR | Sem deploy: instalação local no iPhone |
 
@@ -66,7 +66,8 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 
 ```bash
 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'    # unitário + componente + integração
-xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'     # E2E
+xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'     # XCUITest: smoke e acessibilidade (CI)
+maestro test .maestro/    # fluxo de telas contra os protótipos aprovados (local, antes de cada gate)
 swiftlint --strict    # estático
 
 # Harness de WER (STT real sobre perguntas gravadas):
