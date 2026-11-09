@@ -87,46 +87,7 @@ public struct RootTabView: View {
     }
 
     private func openConversation(_ conversation: Conversation) {
-        var chatMessages: [ChatMessage] = []
-        var currentQuestion: Message?
-
-        for msg in conversation.messages {
-            if msg.role == .question {
-                currentQuestion = msg
-            } else if msg.role == .answer {
-                let qText = currentQuestion?.text ?? ""
-                let latencyReport = msg.latencyMs.map {
-                    LatencyReport(
-                        retrievalSeconds: 0,
-                        totalSeconds: Double($0) / 1000.0
-                    )
-                }
-                chatMessages.append(
-                    ChatMessage(
-                        id: msg.id,
-                        question: qText,
-                        answer: msg.text,
-                        sources: msg.sources,
-                        latency: latencyReport
-                    )
-                )
-                currentQuestion = nil
-            }
-        }
-
-        if let pendingQ = currentQuestion {
-            chatMessages.append(
-                ChatMessage(
-                    id: pendingQ.id,
-                    question: pendingQ.text,
-                    answer: "",
-                    sources: []
-                )
-            )
-        }
-
-        environment.conversationViewModel.messages = chatMessages
-        environment.conversationViewModel.state = chatMessages.isEmpty ? .vazio : .respondido
+        environment.conversationViewModel.loadConversation(conversation)
     }
 }
 

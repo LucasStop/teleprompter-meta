@@ -166,13 +166,32 @@ extension ChatScreenState {
         case .semMaterial:
             return (BadgeState(status: .pronto, title: "Sem resposta no material"), nil)
         case .erro:
-            let defaultMsg = "Respondendo só com as notas de Q&A. Verifique a rede e tente de novo."
+            let bannerTitle: String
+            let defaultMsg: String
+            let isSpeechError: Bool
+            if let msg = errorMessage {
+                isSpeechError = msg.localizedCaseInsensitiveContains("microfone")
+                    || msg.localizedCaseInsensitiveContains("permissão")
+                    || msg.localizedCaseInsensitiveContains("fala")
+                    || msg.localizedCaseInsensitiveContains("pt-BR")
+                    || msg.localizedCaseInsensitiveContains("modelo")
+            } else {
+                isSpeechError = false
+            }
+
+            if isSpeechError, let msg = errorMessage {
+                bannerTitle = "Reconhecimento de fala"
+                defaultMsg = msg
+            } else {
+                bannerTitle = "Sem conexão"
+                defaultMsg = "Respondendo só com as notas de Q&A. Verifique a rede e tente de novo."
+            }
             let banner = BannerState(
                 style: .danger,
-                title: "Sem conexão",
+                title: bannerTitle,
                 message: errorMessage ?? defaultMsg
             )
-            return (BadgeState(status: .erro, title: "Sem conexão"), banner)
+            return (BadgeState(status: .erro, title: bannerTitle), banner)
         case .desconectado:
             let banner = BannerState(
                 style: .warning,

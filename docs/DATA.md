@@ -9,7 +9,7 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 - Ambientes: local e iPhone; teste com diretório temporário por execução. Sem produção separada.
 
 ### Configurações e Segredos (`SettingsStore` e `SecretStore`)
-- Configurações gerais (`SettingsStore`): armazenadas via `UserDefaultsSettingsStore` sob a chave `br.com.lucasstop.teleprompter.settings` como JSON codificado da struct `Settings`. Não contém segredos.
+- Configurações gerais (`SettingsStore`): armazenadas via `UserDefaultsSettingsStore` sob a chave `br.com.lucasstop.teleprompter.settings` como JSON codificado da struct `Settings` (incluindo `llmProvider`, `llmBaseURL`, `llmModel` com decodificação retrocompatível). Não contém segredos.
 - Chave de API de LLM (`SecretStore`): armazenada exclusivamente no Keychain via `KeychainStore` sob a chave `llm.apiKey` (serviço `br.com.lucasstop.teleprompter`). Nunca gravada em `UserDefaults`, arquivos de log ou transitada em texto plano pela interface.
 
 ### Esquema SQLite do Índice Local (`LocalRetriever`)
@@ -47,7 +47,7 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 
 | Entidade | Responsabilidade | Chave | Relações | Dado pessoal? |
 |---|---|---|---|---|
-| Settings | Formato de resposta, limiares do detector, fontes ativas | única | - | Não |
+| Settings | Formato de resposta, limiares do detector, provedor/modelo/URL base de LLM | única | - | Não |
 | MaterialSource | Fonte de material importada (Q&A, README, doc, código) | path | tem Chunks no LocalRetriever | Não |
 | QANote | Pergunta esperada e resposta preparada | id | pertence a um Material | Não |
 | Document | README e documentos importados | id | tem Chunks | Não |

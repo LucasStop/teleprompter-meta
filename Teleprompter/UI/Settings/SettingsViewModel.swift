@@ -135,6 +135,30 @@ final class SettingsViewModel {
         }
     }
 
+    var llmProvider: String {
+        get { settings.llmProvider }
+        set {
+            settings.llmProvider = newValue
+            settingsStore.save(settings)
+        }
+    }
+
+    var llmBaseURL: String {
+        get { settings.llmBaseURL }
+        set {
+            settings.llmBaseURL = newValue
+            settingsStore.save(settings)
+        }
+    }
+
+    var llmModel: String {
+        get { settings.llmModel }
+        set {
+            settings.llmModel = newValue
+            settingsStore.save(settings)
+        }
+    }
+
     // MARK: - Ações de Chave de API (SecretStore)
 
     func saveApiKey() {
