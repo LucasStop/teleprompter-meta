@@ -24,7 +24,7 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 | ResponseFormatter | Ajusta ao formato e ao limite da lente | Swift puro | `App/Domain` | LLM, Retrieval | Não |
 | Lens (protocolo) | Saída da resposta | `SimulatedLens` e `GlassesLens` | `App/Lens` | Formatter | Não |
 | Glasses | Isola o DAT SDK: registro, microfone, display, gestos | MWDATCore, MWDATDisplay | `App/Glasses` | DAT SDK | Não |
-| Persistência | Configurações, índice, notas de Q&A, conversas | Arquivos/SwiftData | `App/Storage` | - | Sim (perguntas e respostas salvas) |
+| Persistência | Configurações, índice, notas de Q&A, conversas | SQLite3 do sistema / Arquivos | `App/Storage` | - | Sim (perguntas e respostas salvas) |
 | Segredos | Chave do LLM | Keychain | `App/Storage` | - | Sim |
 | Infra e CI | Build e testes | XcodeGen, GitHub Actions macOS, lefthook | `.github`, `project.yml` | - | - |
 

@@ -9,6 +9,8 @@ import Observation
 final class AppEnvironment {
     let lens: SimulatedLens
     let conversationViewModel: ConversationViewModel
+    let conversationStore: any ConversationStore
+    let conversationsViewModel: ConversationsViewModel
     let settingsStore: any SettingsStore
     let secretStore: any SecretStore
     let settingsViewModel: SettingsViewModel
@@ -17,12 +19,31 @@ final class AppEnvironment {
     init(
         lens: SimulatedLens = SimulatedLens(),
         conversationViewModel: ConversationViewModel? = nil,
+        conversationStore: (any ConversationStore)? = nil,
         settingsStore: (any SettingsStore)? = nil,
         secretStore: (any SecretStore)? = nil,
         materialViewModel: MaterialViewModel? = nil
     ) {
         let lensInstance = lens
         self.lens = lensInstance
+
+        let store: any ConversationStore
+        if let conversationStore {
+            store = conversationStore
+        } else {
+            if let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                let dbURL = supportDir.appendingPathComponent("Teleprompter").appendingPathComponent("conversations.sqlite")
+                if let sqliteStore = try? SQLiteConversationStore(databaseURL: dbURL) {
+                    store = sqliteStore
+                } else {
+                    store = InMemoryConversationStore()
+                }
+            } else {
+                store = InMemoryConversationStore()
+            }
+        }
+        self.conversationStore = store
+        self.conversationsViewModel = ConversationsViewModel(store: store)
 
         let effectiveSettingsStore: any SettingsStore = settingsStore ?? UserDefaultsSettingsStore()
         let effectiveSecretStore: any SecretStore = secretStore ?? KeychainStore()
