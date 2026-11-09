@@ -69,6 +69,9 @@ swiftlint --strict    # estático
 
 # Harness de WER (STT real sobre perguntas gravadas):
 RUN_STT=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/WERHarnessTests
+
+# Benchmark de recuperação (só roda com RUN_BENCH=1):
+TEST_RUNNER_RUN_BENCH=1 RUN_BENCH=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/RetrievalBenchmarkTests
 ```
 
 ### Gravação e execução do harness de WER
