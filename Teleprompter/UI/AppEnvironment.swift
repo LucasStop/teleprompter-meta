@@ -15,6 +15,7 @@ final class AppEnvironment {
     let secretStore: any SecretStore
     let settingsViewModel: SettingsViewModel
     let materialViewModel: MaterialViewModel
+    let ensaioViewModel: EnsaioViewModel
 
     init(
         lens: SimulatedLens = SimulatedLens(),
@@ -22,26 +23,13 @@ final class AppEnvironment {
         conversationStore: (any ConversationStore)? = nil,
         settingsStore: (any SettingsStore)? = nil,
         secretStore: (any SecretStore)? = nil,
-        materialViewModel: MaterialViewModel? = nil
+        materialViewModel: MaterialViewModel? = nil,
+        ensaioViewModel: EnsaioViewModel? = nil
     ) {
         let lensInstance = lens
         self.lens = lensInstance
 
-        let store: any ConversationStore
-        if let conversationStore {
-            store = conversationStore
-        } else {
-            if let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-                let dbURL = supportDir.appendingPathComponent("Teleprompter").appendingPathComponent("conversations.sqlite")
-                if let sqliteStore = try? SQLiteConversationStore(databaseURL: dbURL) {
-                    store = sqliteStore
-                } else {
-                    store = InMemoryConversationStore()
-                }
-            } else {
-                store = InMemoryConversationStore()
-            }
-        }
+        let store = Self.resolveConversationStore(conversationStore)
         self.conversationStore = store
         self.conversationsViewModel = ConversationsViewModel(store: store)
 
@@ -77,6 +65,28 @@ final class AppEnvironment {
         } else {
             self.materialViewModel = MaterialViewModel(indexable: retriever)
         }
+
+        if let ensaioViewModel {
+            self.ensaioViewModel = ensaioViewModel
+        } else {
+            let runner = EnsaioRunner(
+                transcriber: InMemoryAppTranscriber(),
+                retriever: retriever,
+                generator: InMemoryAppGenerator(),
+                formatter: LensFormatter(),
+                lens: lensInstance
+            )
+            self.ensaioViewModel = EnsaioViewModel(runner: runner)
+        }
+    }
+
+    private static func resolveConversationStore(_ store: (any ConversationStore)?) -> any ConversationStore {
+        if let store { return store }
+        guard let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return InMemoryConversationStore()
+        }
+        let dbURL = supportDir.appendingPathComponent("Teleprompter").appendingPathComponent("conversations.sqlite")
+        return (try? SQLiteConversationStore(databaseURL: dbURL)) ?? InMemoryConversationStore()
     }
 }
 
