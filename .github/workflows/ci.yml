@@ -13,6 +13,20 @@ permissions:
   contents: read
 
 jobs:
+  gitleaks:
+    name: Gitleaks
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ferramentas
+        run: brew install gitleaks
+
+      - name: Gitleaks
+        run: gitleaks detect --source . --redact --no-banner --config .gitleaks.toml
+
   check:
     name: SwiftLint · Testes
     runs-on: macos-latest
@@ -29,6 +43,9 @@ jobs:
         run: swiftlint --strict
 
       - name: Testes
-        run: xcodebuild test -scheme "$SCHEME" -destination 'platform=iOS Simulator,name=iPhone 17'
+        run: xcodebuild test -scheme "$SCHEME" -destination 'platform=iOS Simulator,name=iPhone 17' -enableCodeCoverage YES -resultBundlePath build/Test.xcresult
         env:
           SCHEME: Teleprompter
+
+      - name: Gate de cobertura
+        run: ./tools/coverage-gate.sh build/Test.xcresult

@@ -4,7 +4,7 @@ pre-commit:
   parallel: true
   commands:
     segredo:
-      run: gitleaks git --staged --redact --no-banner
+      run: gitleaks git --staged --redact --no-banner --config .gitleaks.toml
     swiftlint:
       glob: "*.swift"
       run: swiftlint --strict {staged_files}
