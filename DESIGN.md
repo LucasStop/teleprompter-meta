@@ -15,7 +15,7 @@ Duas superfícies: o app no iPhone (SwiftUI) e a lente do Meta Ray-Ban Display (
 - Conceito visual: "palco escuro": fundo preto, texto claro e um único acento âmbar, como a luz de um teleprompter. A lente usa a mesma linguagem do app.
 - Referências que gosto: nenhuma definida; adicionar ao fim do arquivo quando surgirem.
 - Anti-referências: dashboards coloridos, animação chamativa, texto pequeno e denso.
-- Logo / ícone: ainda não existe; arquivos em `design/brand/` quando houver. Ícone do app: proposta no protótipo T01.
+- Logo / ícone: ícone do app aprovado em 2026-11-09, fonte em `design/brand/app-icon.svg` (lente `primary` escuro #F5A524 sobre `background` escuro #0B0B0C, três linhas de texto em `foreground` e `muted`), exportado em 1024 px para `Teleprompter/Assets.xcassets/AppIcon.appiconset`.
 
 ## 2. Princípios de design
 - Legibilidade antes de beleza: o texto precisa ser lido num relance, a distância e sob pressão.
@@ -97,7 +97,7 @@ Lente (600x600, tamanhos a validar no óculos):
 
 ### 3.6 Iconografia e imagem
 - Biblioteca de ícones: SF Symbols · Tamanhos: 17 e 22 pt · Traço: peso regular, `hierarchical` quando houver
-- Imagens/ilustração: sem ilustrações no MVP; ícone do app a definir. Texto alternativo (rótulo de acessibilidade) obrigatório em todo ícone sem texto.
+- Imagens/ilustração: sem ilustrações no MVP; ícone do app em `design/brand/app-icon.svg`. Texto alternativo (rótulo de acessibilidade) obrigatório em todo ícone sem texto.
 
 ## 4. Componentes
 
