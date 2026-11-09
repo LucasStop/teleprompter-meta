@@ -8,7 +8,7 @@
 #   export ANTHROPIC_API_KEY=...    # opcional: Anthropic direto
 #   export OPENAI_API_KEY=...       # opcional: OpenAI direto
 #   tools/llm-bench.sh [UDID]
-# Modelos sobrescrevíveis: OR_HAIKU_MODEL, OR_OPENAI_MODEL, GROQ_MODEL, ANTHROPIC_MODEL, OPENAI_MODEL.
+# Modelos sobrescrevíveis: OR_HAIKU_MODEL, OR_GEMINI_MODEL, OR_DEEPSEEK_MODEL, OR_OPENAI_MODEL, GROQ_MODEL, ANTHROPIC_MODEL, OPENAI_MODEL.
 # Confira os ids no catálogo de cada provedor antes de rodar.
 set -euo pipefail
 
@@ -32,6 +32,8 @@ add() { # perfil, chave, url, modelo, formato
 
 if [ -n "${OPENROUTER_API_KEY:-}" ]; then
   add or-haiku "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_HAIKU_MODEL:-anthropic/claude-haiku-5.5}" openai
+  add or-gemini "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_GEMINI_MODEL:-google/gemini-3.1-flash-lite}" openai
+  add or-deepseek "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_DEEPSEEK_MODEL:-deepseek/deepseek-v4-flash}" openai
   add or-openai "$OPENROUTER_API_KEY" https://openrouter.ai/api/v1 "${OR_OPENAI_MODEL:-openai/gpt-5-mini}" openai
 fi
 [ -n "${GROQ_API_KEY:-}" ] && add groq "$GROQ_API_KEY" https://api.groq.com/openai/v1 "${GROQ_MODEL:-llama-3.3-70b-versatile}" openai
