@@ -1,0 +1,100 @@
+import Foundation
+import Observation
+
+/// Raiz de composição da aplicação Teleprompter (T02).
+/// Monta o ConversationViewModel com dependências em memória (FakeRetriever/FakeGenerator)
+/// sem requisições de rede e sem hardware real.
+@MainActor
+@Observable
+final class AppEnvironment {
+    let lens: SimulatedLens
+    let conversationViewModel: ConversationViewModel
+
+    init(
+        lens: SimulatedLens = SimulatedLens(),
+        conversationViewModel: ConversationViewModel? = nil
+    ) {
+        let lensInstance = lens
+        self.lens = lensInstance
+
+        if let conversationViewModel {
+            self.conversationViewModel = conversationViewModel
+        } else {
+            let retriever = InMemoryAppRetriever()
+            let generator = InMemoryAppGenerator()
+            let transcriber = InMemoryAppTranscriber()
+            let detector = PauseQuestionDetector(silenceThreshold: 1.2)
+            self.conversationViewModel = ConversationViewModel(
+                retriever: retriever,
+                generator: generator,
+                formatter: LensFormatter(),
+                lens: lensInstance,
+                transcriber: transcriber,
+                detector: detector,
+                format: .bullets
+            )
+        }
+    }
+}
+
+// MARK: - InMemory Doubles para o AppEnvironment
+
+/// Recuperador em memória com dados mockados para o protótipo da sessão.
+struct InMemoryAppRetriever: Retriever, Sendable {
+    func retrieve(_ question: String) async throws -> Retrieval {
+        let lower = question.lowercased()
+
+        if lower.contains("swift") || lower.contains("flutter") {
+            let note = Chunk(
+                text: "• DAT SDK só tem módulos Swift\n• Menor latência de áudio\n• Acesso direto ao SpeechAnalyzer",
+                source: SourceRef(path: "qa/stack.md")
+            )
+            return Retrieval(qaNote: note, chunks: [])
+        }
+
+        if lower.contains("problema") || lower.contains("resolve") {
+            let chunk = Chunk(
+                text: "• Resposta rápida na banca\n• Sem olhar anotações",
+                source: SourceRef(path: "README.md")
+            )
+            return Retrieval(qaNote: nil, chunks: [chunk])
+        }
+
+        if lower.contains("busca") {
+            let chunk = Chunk(
+                text: "Busca híbrida com BM25 e embeddings locais no dispositivo.",
+                source: SourceRef(path: "docs/ADR-0001.md")
+            )
+            return Retrieval(qaNote: nil, chunks: [chunk])
+        }
+
+        // Sem trecho acima do limiar -> US-13
+        return Retrieval(qaNote: nil, chunks: [])
+    }
+}
+
+/// Gerador em memória simulando streaming de tokens.
+final class InMemoryAppGenerator: AnswerGenerator, @unchecked Sendable {
+    func generate(question: String, context: [Chunk]) -> AsyncStream<String> {
+        let text = context.map(\.text).joined(separator: "\n")
+        let content = text.isEmpty ? "Resposta gerada a partir do contexto." : text
+
+        return AsyncStream { continuation in
+            let words = content.components(separatedBy: " ")
+            for (index, word) in words.enumerated() {
+                let suffix = index == words.count - 1 ? "" : " "
+                continuation.yield(word + suffix)
+            }
+            continuation.finish()
+        }
+    }
+}
+
+/// Transcritor em memória sem microfone real.
+final class InMemoryAppTranscriber: SpeechTranscriber, @unchecked Sendable {
+    func transcribe(_ audio: AsyncStream<AudioBuffer>) -> AsyncStream<Transcript> {
+        AsyncStream { continuation in
+            continuation.finish()
+        }
+    }
+}
