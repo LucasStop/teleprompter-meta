@@ -23,3 +23,7 @@ Regras: iOS 17.2+, Swift 6, um protocolo por etapa, DAT SDK só em Teleprompter/
 Proibido: git commit/push/merge, gh, ler .env ou Keychain, editar .github/ e project.yml (salvo se listado acima).
 Entregue: resumo de 5 linhas do que mudou e do resultado dos gates.
 ```
+
+## Fechamento de issues
+
+O `issue-flow.yml` reabre issue fechada à mão como `completed`. Fechamento por PR mergeado vale, inclusive quando o GitHub o atribui ao commit do merge (PR com vários `Closes #N`). Issue entregue que ficou aberta por esse motivo fecha com um PR seguinte que traga `Closes #N`.
