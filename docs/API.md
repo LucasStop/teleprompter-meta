@@ -39,6 +39,7 @@ Erro tipado por parte (`AudioError`, `STTError`, `LLMError`, `GlassesError`). Me
 | `SecretStore` | get/set/delete por chave | `KeychainStore`, `InMemorySecretStore` | unitário, integração |
 | `ResponseFormatter` | texto + formato -> conteúdo para a lente | puro | unitário, visual |
 | `Lens` | exibe/limpa conteúdo; emite gestos | `SimulatedLens`, `GlassesLens` | E2E, manual |
+| `Clock` | `now() -> ContinuousClock.Instant` | `SystemClock`, `TestClock` (fake) | unitário |
 
 ## 8. Contrato com o provedor de LLM (externo)
 
@@ -83,5 +84,6 @@ Endpoint compatível com chat completions (OpenAI format), consumido por `Stream
 - `.invalidResponse`: payload SSE ou JSON que não segue a estrutura esperada.
 
 ## 9. Histórico de mudanças do contrato
+- 2026-11-08: contrato `Clock` adicionado para medição determinística de latência e controle de silêncio (issue #36, US-01 a US-06, US-12, US-13).
 - 2026-11-08: contrato com provedor de LLM (SSE chat completions) e `SecretStore` adicionados (US-04).
 - 2026-11-08: contratos iniciais (rascunho).
