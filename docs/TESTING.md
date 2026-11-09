@@ -73,6 +73,11 @@ swiftlint --strict    # estático
 # Harness de WER (STT real sobre perguntas gravadas):
 RUN_STT=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/WERHarnessTests
 
+# Geração de áudios sintéticos das perguntas (ElevenLabs):
+ELEVENLABS_API_KEY="..." ./tools/gerar-audios.sh --listar-vozes
+ELEVENLABS_API_KEY="..." ELEVENLABS_VOICE_A="<id-voz-a>" ELEVENLABS_VOICE_B="<id-voz-b>" ./tools/gerar-audios.sh
+./tools/gerar-audios.sh --ruido    # gera ruido-voz-a a partir de voz-a sem chamada de rede
+
 # Benchmark de recuperação (só roda com RUN_BENCH=1):
 TEST_RUNNER_RUN_BENCH=1 RUN_BENCH=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/RetrievalBenchmarkTests
 
@@ -80,11 +85,21 @@ TEST_RUNNER_RUN_BENCH=1 RUN_BENCH=1 xcodebuild test -scheme Teleprompter -destin
 TEST_RUNNER_RUN_LLM=1 RUN_LLM=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/LLMBenchmarkTests
 ```
 
-### Gravação e execução do harness de WER
+### Gravação, geração e execução do harness de WER
 - Local dos arquivos: `TeleprompterTests/Fixtures/perguntas/`.
-- Formato: gravar em 8 kHz mono, nome `NN.wav` com a transcrição exata de referência em `NN.txt` (ex.: `01.wav` e `01.txt`).
-- As 30 perguntas da banca serão gravadas pelo Lucas.
-- O teste `WERHarnessTests` roda apenas localmente quando a variável `RUN_STT=1` estiver definida (no CI ele faz `XCTSkip` automaticamente). Se a pasta não contiver arquivos `.wav`, o teste emite `XCTSkip` com instruções de gravação. O aceite (PRD US-01) valida WER médio abaixo de 15%.
+- Formato do áudio: 8 kHz mono PCM 16 bits (LEI16@8000).
+- Estrutura de conjuntos (subpastas com arquivos `.wav`):
+  - `voz-a/`: áudios sintetizados via ElevenLabs com a voz A (ID em `$ELEVENLABS_VOICE_A`, modelo multilíngue pt-BR), pareados com `../NN.txt`.
+  - `voz-b/`: áudios sintetizados via ElevenLabs com a voz B (ID em `$ELEVENLABS_VOICE_B`), pareados com `../NN.txt`.
+  - `ruido-voz-a/`: segunda passada gerada via `ffmpeg` a partir de `voz-a` (sem chamada de rede), aplicando ruído branco leve e filtro passa-banda de 300 a 3400 Hz (simulação de canal telefônico / compressão de áudio bluetooth HFP).
+  - `humano/`: áudios autênticos gravados pelo Lucas (as 30 perguntas da banca), aceitando transcrições locais `humano/NN.txt` ou caindo para `../NN.txt`.
+- Pareamento de arquivos: o harness descobre os conjuntos automaticamente pelas subpastas de `Fixtures/perguntas/` que contenham `.wav`, buscando a transcrição de referência primeiro localmente na subpasta (`<conjunto>/NN.txt`) e, se ausente, na pasta raiz (`Fixtures/perguntas/NN.txt`). Arquivos sem referência correspondente são ignorados.
+- O que o WER sintético prova e não prova:
+  - *O que prova*: valida o pipeline de transcrição on-device de ponta a ponta (decodificação de buffer PCM a 8 kHz, entrega contínua para o `SpeechAnalyzer`, robustez lexical com vocabulário técnico de Engenharia de Software em português do Brasil e comportamento sob ruído de banda estreita).
+  - *O que não prova*: não substitui a acústica real da fala humana (prosódia, respiração, variações espontâneas de entonação e microfone HFP físico com ruído de sala de aula). Por isso, a asserção do limite de 15% de WER (PRD US-01) aplica-se exclusivamente ao conjunto `humano`. Os conjuntos sintéticos apenas reportam a média e a pior pergunta no log do teste.
+- Execução do teste:
+  - O teste completo com STT (`WERHarnessTests.testWordErrorRateOnRecordedQuestions`) roda apenas localmente com `RUN_STT=1` (faz `XCTSkip` no CI e quando não houver `.wav`).
+  - Os testes unitários de pareamento de arquivos e métricas (`WERDatasetDiscoveryTests` e similares dentro de `WERHarnessTests`) rodam sempre na suíte padrão sem depender de STT nem de chamada de rede.
 
 ## 7. Pronto (Definition of Done) para PR
 - [ ] Testes novos ou alterados cobrem a mudança no nível certo
