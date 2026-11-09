@@ -15,13 +15,21 @@
   .badge.ok i { background: var(--success); } .badge.act i { background: var(--primary); } .badge.err i { background: var(--danger); }
   .ghost { min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--foreground); font: 15px var(--font); display: grid; place-items: center; }
   .chat { flex: 1; overflow: auto; padding: var(--s2) var(--s4) var(--s4); display: grid; gap: var(--s3); align-content: start; }
-  .msg { max-width: 88%; padding: var(--s3) var(--s4); border-radius: var(--r-lg); display: grid; gap: var(--s2); }
-  .msg.q { justify-self: end; background: var(--primary); color: var(--primary-foreground); border-bottom-right-radius: var(--r-sm); }
-  .msg.a { justify-self: start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: var(--r-sm); }
-  .msg ul { margin: 0; padding-left: var(--s4); }
+  /* Template de IA (issue #111): pergunta em bolha neutra, resposta sem bolha, citação inline, fontes recolhíveis. */
+  .msg { display: grid; gap: var(--s2); }
+  .msg.q { justify-self: end; max-width: 80%; padding: 10px var(--s4); border-radius: 20px; background: var(--user-bubble); color: var(--foreground); }
+  .msg.a { justify-self: stretch; padding: 0 2px; }
+  .msg ul { margin: 0; padding-left: var(--s4); display: grid; gap: var(--s1); }
+  .cite { font: 600 11px/1 var(--mono); color: var(--primary); vertical-align: super; margin-left: 2px; }
   .cap { font-size: 12px; line-height: 16px; color: var(--muted); }
-  .src { display: flex; flex-wrap: wrap; gap: var(--s1); }
-  .src span { font: 12px/16px var(--mono); border: 1px solid var(--border); border-radius: 999px; padding: 2px var(--s2); color: var(--muted); }
+  .srcbox { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s2) var(--s3); display: grid; gap: var(--s2); }
+  .srchead { display: flex; align-items: center; justify-content: space-between; min-height: 28px; font-size: 15px; line-height: 20px; color: var(--muted); }
+  .srchead b { color: var(--primary); font: 600 15px/20px var(--mono); margin-right: var(--s1); }
+  .src { display: grid; gap: var(--s1); }
+  .src span { font: 12px/16px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .src span i { font-style: normal; color: var(--primary); margin-right: var(--s2); }
+  .foot { display: flex; align-items: center; gap: var(--s2); font-size: 12px; line-height: 16px; color: var(--muted); }
+  .foot i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; }
   .partial { opacity: .7; }
   .banner { border-radius: var(--r-md); padding: var(--s3) var(--s4); border: 1px solid var(--danger); background: var(--surface); font-size: 15px; line-height: 20px; margin: 0 var(--s4); }
   .banner b { color: var(--danger); }
@@ -29,9 +37,9 @@
   .empty h3 { margin: 0; color: var(--foreground); font-size: 20px; line-height: 25px; }
   .chips { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; }
   .chips span { border: 1px solid var(--border); border-radius: 999px; padding: var(--s2) var(--s3); background: var(--surface); color: var(--foreground); font-size: 15px; line-height: 20px; }
-  .comp { border-top: 1px solid var(--border); padding: var(--s2) var(--s4) var(--s3); display: grid; gap: var(--s2); background: var(--surface); }
+  .comp { padding: var(--s2) var(--s4) var(--s3); display: grid; gap: var(--s2); background: var(--background); }
   .row { display: flex; align-items: flex-end; gap: var(--s2); }
-  .field { flex: 1; min-height: 44px; border: 1px solid var(--border); border-radius: 22px; padding: 10px var(--s4); background: var(--background); color: var(--foreground); font: 17px/24px var(--font); }
+  .field { flex: 1; min-height: 44px; border: 1px solid var(--border); border-radius: 999px; padding: 10px var(--s4); background: var(--surface-raised); color: var(--foreground); font: 17px/24px var(--font); }
   .field.ph { color: var(--muted); }
   .ib { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--background); color: var(--foreground); font: 600 17px var(--font); display: grid; place-items: center; flex: none; }
   .ib.pri { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
@@ -73,7 +81,7 @@
   </div>
 </main>
 <script>
-const estados = { vazio: "Vazio", digitando: "Digitando", ouvindo: "Escuta contínua", pensando: "Pensando", conversa: "Conversa", semmaterial: "Sem no material", erro: "Sem conexão", desconectado: "Óculos desconectados", projetos: "Trocar projeto", novo: "Novo projeto", excluir: "Excluir projeto" };
+const estados = { vazio: "Vazio", digitando: "Digitando", ouvindo: "Escuta contínua", pensando: "Pensando", conversa: "Conversa", fontes: "Fontes abertas", semmaterial: "Sem no material", erro: "Sem conexão", desconectado: "Óculos desconectados", projetos: "Trocar projeto", novo: "Novo projeto", excluir: "Excluir projeto" };
 const temas = { auto: "Sistema", light: "Claro", dark: "Escuro" };
 let est = "conversa", tema = "dark";
 const $ = (id) => document.getElementById(id);
@@ -81,11 +89,13 @@ function btns(box, obj, set) {
   Object.entries(obj).forEach(([k, v]) => { const b = document.createElement("button"); b.textContent = v; b.dataset.k = k; b.onclick = () => { set(k); render(); }; box.appendChild(b); });
 }
 const Q1 = "Por que Swift nativo e não Flutter?";
-const A1 = `<ul><li>DAT SDK só tem módulos Swift</li><li>Menor latência de áudio</li><li>Acesso direto ao SpeechAnalyzer</li></ul><div class="src"><span>qa/stack.md</span><span>docs/ADR-0001.md</span></div><span class="cap">nota de Q&amp;A · 0,6 s</span>`;
+const fontes = (lista, aberto) => `<div class="srcbox"><div class="srchead"><span><b>${lista.length}</b>${lista.length === 1 ? "fonte" : "fontes"} do seu material</span><span>${aberto ? "▴" : "▾"}</span></div>${aberto ? `<div class="src">${lista.map((f, i) => `<span><i>${i + 1}</i>${f}</span>`).join("")}</div>` : ""}</div>`;
+const foot = (t) => `<span class="foot"><i></i>${t}</span>`;
+const A1 = (aberto) => `<ul><li>DAT SDK só tem módulos Swift<span class="cite">1</span></li><li>Menor latência de áudio<span class="cite">1</span></li><li>Acesso direto ao <strong>SpeechAnalyzer</strong><span class="cite">2</span></li></ul>${fontes(["qa/stack.md", "docs/adr/0001-swift-nativo-com-dat-sdk.md"], aberto)}${foot("Na lente · nota de Q&amp;A · 0,6 s")}`;
 const q = (t, cls = "") => `<div class="msg q ${cls}">${t}</div>`;
 const a = (h) => `<div class="msg a">${h}</div>`;
 function badge(e) {
-  const m = { vazio: ["Pronto", ""], digitando: ["Pronto", ""], ouvindo: ["Ouvindo a banca", "act"], pensando: ["Buscando no material", "act"], conversa: ["Resposta enviada à lente", "ok"], semmaterial: ["Sem resposta no material", ""], erro: ["Sem conexão", "err"], desconectado: ["Óculos desconectados", "err"], projetos: ["Resposta enviada à lente", "ok"], novo: ["Resposta enviada à lente", "ok"], excluir: ["Resposta enviada à lente", "ok"] }[e];
+  const m = { vazio: ["Pronto", ""], digitando: ["Pronto", ""], ouvindo: ["Ouvindo a banca", "act"], pensando: ["Buscando no material", "act"], conversa: ["Resposta enviada à lente", "ok"], fontes: ["Resposta enviada à lente", "ok"], semmaterial: ["Sem resposta no material", ""], erro: ["Sem conexão", "err"], desconectado: ["Óculos desconectados", "err"], projetos: ["Resposta enviada à lente", "ok"], novo: ["Resposta enviada à lente", "ok"], excluir: ["Resposta enviada à lente", "ok"] }[e];
   return `<span class="badge ${m[1]}"><i></i>${m[0]}</span>`;
 }
 function render() {
@@ -98,11 +108,11 @@ function render() {
   } else if (est === "ouvindo") {
     msgs = a(`<span class="cap">Escuta contínua ligada. Detecto o fim da pergunta e respondo sozinho.</span>`) + q(`Por que Swift nativo e não <span class="partial">Flutter...</span>`, "partial") + `<span class="cap" style="justify-self:end">Pergunta parcial</span>`;
   } else if (est === "pensando") {
-    msgs = q(Q1) + a(`<span class="cap">Buscando no material...</span><span>DAT SDK só tem módulos</span>`);
+    msgs = q(Q1) + a(`<span class="cap">Buscando no material...</span><ul><li>DAT SDK só tem módulos</li></ul>`);
   } else if (est === "semmaterial") {
     msgs = q("Qual o orçamento do projeto?") + a(`<strong>Não encontrei isso no seu material.</strong><span>Importe uma nota ou documento sobre o assunto, ou reformule a pergunta.</span><span class="cap">Nada acima do limiar de similaridade</span>`);
   } else {
-    msgs = q("Qual o problema que o app resolve?") + a(`<ul><li>Resposta rápida na banca</li><li>Sem olhar anotações</li></ul><div class="src"><span>README.md</span></div><span class="cap">trecho do README · 1,4 s</span>`) + q(Q1) + a(A1);
+    msgs = q("Qual o problema que o app resolve?") + a(`<ul><li>Resposta rápida na banca<span class="cite">1</span></li><li>Sem olhar anotações<span class="cite">1</span></li></ul>${fontes(["README.md"], false)}${foot("Na lente · trecho do README · 1,4 s")}`) + q(Q1) + a(A1(est === "fontes"));
   }
   let ban = "";
   if (est === "erro") ban = `<div class="banner"><b>Sem conexão.</b> Respondendo só com as notas de Q&amp;A. Verifique a rede e tente de novo.</div>`;

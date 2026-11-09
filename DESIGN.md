@@ -47,6 +47,7 @@ Camada primitiva (paleta) e camada semântica (uso). Componentes só consomem a 
 | `info` | #0B5FB0 | #58A6FF | Informação neutra |
 | `focus-ring` | #A8560A | #FFC857 | Anel de foco |
 | `disabled` | #A9A49B | #5A5853 | Controle desabilitado |
+| `user-bubble` | #EFEBE4 | #232326 | Fundo da pergunta do usuário no Chat (bolha neutra) |
 
 - Dark mode: sim, e é o tema de referência. O app segue o tema do sistema (claro/escuro automático). A lente é sempre escura (fundo preto) e usa os valores do tema escuro.
 - Contraste: texto >= 4,5:1 (3:1 para texto grande e ícones de UI) contra o fundo, nos dois modos. Cor nunca é o único sinal de estado (acompanhar de ícone ou texto). Valores conferidos à mão para `foreground`, `muted`, `primary` e `danger`; validar todos com ferramenta no protótipo.
@@ -113,7 +114,8 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Navegação | abas inferiores (Sessão, Material, Ensaio, Ajustes) | md | ativo | idem | E2E |
 | Alerta / banner | info (borda neutra, ex.: arquivos ignorados na importação), warning, danger (só erro) | md | padrão, dispensável | idem | visual |
 | Selo de estado | ouvindo, transcrevendo, pensando, respondendo, erro, desconectado | sm | todos | idem | componente + visual |
-| Mensagem de chat | pergunta, resposta (markdown inline renderizado; fontes uma por linha, sem corte), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
+| Mensagem de chat | pergunta (bolha neutra `user-bubble` à direita, até 80%), resposta (sem bolha, largura cheia, markdown inline, citação numerada inline em `primary`, bloco recolhível "N fontes do seu material" com uma fonte por linha, rodapé de status), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
+| Composer do chat (`ComposerField`) | pílula (raio total, fundo `surface-raised`, borda `border`) com botão redondo de 44 pt: microfone sem texto, enviar em `primary` com texto | md | padrão, digitando, ouvindo, desabilitado | `Teleprompter/DesignSystem/Components/ComposerField.swift` | componente + a11y |
 | Compositor | texto, microfone, escuta contínua | md | vazio, digitando, ouvindo, desabilitado | idem | componente + a11y |
 | Transcrição ao vivo | parcial, final | md | vazio, ativo, erro | idem | componente |
 | Cartão de resposta | bullets, palavras-chave, texto completo | md | carregando (streaming), pronto, erro | idem | visual |
