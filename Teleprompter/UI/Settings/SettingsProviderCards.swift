@@ -101,7 +101,7 @@ extension SettingsView {
                 .foregroundStyle(Colors.muted)
                 .padding(.top, Spacing.s1)
 
-            TextField("anthropic/claude-haiku", text: $viewModel.llmModel)
+            TextField("anthropic/claude-haiku-5.5", text: $viewModel.llmModel)
                 .font(Typography.bodySm)
                 .foregroundStyle(Colors.foreground)
                 .padding(.horizontal, Spacing.s3)

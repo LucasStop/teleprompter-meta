@@ -19,7 +19,7 @@ const provedor = (p, or) => {
     const conta = or === "conectado"
       ? `<div class="item" style="padding:0"><div class="t"><b>Conectado ao OpenRouter</b><span>Chave no Keychain ••••4f2a</span></div><span class="v">Sair</span></div>`
       : `<button class="btn" style="width:100%">Entrar com OpenRouter</button><span class="cap">Abre o login do OpenRouter; a chave volta direto para o Keychain.</span>${or === "erro" ? '<span class="errmsg">Login cancelado ou recusado. Tente de novo.</span>' : ""}`;
-    return seg + card(`${conta}<label class="cap" for="m">Modelo</label><div class="field" id="m">anthropic/claude-haiku</div>`);
+    return seg + card(`${conta}<label class="cap" for="m">Modelo</label><div class="field" id="m">anthropic/claude-haiku-5.5</div>`);
   }
   return seg + card(`<label class="cap">Formato</label><div class="seg"><div class="on">OpenAI</div><div>Anthropic</div></div><label class="cap" for="u">URL base</label><div class="field" id="u">https://api.groq.com/openai/v1</div><label class="cap" for="m">Modelo</label><div class="field" id="m">llama-3.3-70b-versatile</div><label class="cap" for="k">Chave de API (Keychain)</label><div class="field ${or === "erro" ? "err" : ""}" id="k">${or === "erro" ? "sk-••••••••" : "Chave salva ••••4f2a"}</div>${or === "erro" ? '<span class="errmsg">Chave recusada pelo provedor. Confira e salve de novo.</span>' : ""}`);
 };
