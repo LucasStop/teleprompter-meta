@@ -8,8 +8,8 @@ final class ConversationsViewModelTests: XCTestCase {
     private var calendar: Calendar!
     private var baseNow: Date!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         store = InMemoryConversationStore()
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(secondsFromGMT: -3 * 3600)!
