@@ -1,0 +1,1 @@
+Qual a diferença entre teste de caixa branca e teste de caixa preta?
