@@ -1,0 +1,12 @@
+appId: br.com.lucasstop.teleprompter
+---
+- launchApp
+- tapOn: "Ensaio"
+- assertVisible:
+    id: "ensaio-title"
+- assertVisible:
+    id: "ensaio-empty-title"
+- assertVisible:
+    id: "ensaio-empty-instruction"
+- assertVisible:
+    id: "ensaio-add-audios-button"

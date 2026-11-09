@@ -86,6 +86,7 @@ struct MaterialView: View {
             Text("Material")
                 .font(Typography.h1)
                 .foregroundStyle(Colors.foreground)
+                .accessibilityIdentifier("material-title")
             Spacer()
         }
     }
@@ -147,6 +148,7 @@ struct MaterialView: View {
             PrimaryButton(title: "Importar material") {
                 viewModel.isPickingFile = true
             }
+            .accessibilityIdentifier("material-import-button")
         case .carregando:
             PrimaryButton(title: "Indexando...", isLoading: true, isEnabled: false) {}
         case .padrao:
@@ -154,6 +156,7 @@ struct MaterialView: View {
                 PrimaryButton(title: "Importar material") {
                     viewModel.isPickingFile = true
                 }
+                .accessibilityIdentifier("material-import-button")
 
                 Button(role: .destructive) {
                     viewModel.isShowingClearConfirmation = true
@@ -237,6 +240,7 @@ private struct MaterialEmptyStateView: View {
             Text("Nenhum material importado")
                 .font(Typography.h3)
                 .foregroundStyle(Colors.foreground)
+                .accessibilityIdentifier("material-empty-title")
 
             Text("Importe notas de Q&A, README, documentos ou o repositório. O chat só responde com isso.")
                 .font(Typography.bodySm)

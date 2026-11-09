@@ -1,0 +1,14 @@
+appId: br.com.lucasstop.teleprompter
+---
+- launchApp
+- tapOn: "Ajustes"
+- assertVisible: "Ajustes"
+- tapOn: "Palavras-chave"
+- scrollUntilVisible:
+    element:
+      id: "settings-restore-defaults-button"
+    direction: DOWN
+- assertVisible:
+    id: "settings-restore-defaults-button"
+- tapOn:
+    id: "settings-restore-defaults-button"

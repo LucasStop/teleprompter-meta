@@ -1,0 +1,8 @@
+appId: br.com.lucasstop.teleprompter
+---
+- launchApp
+- tapOn: "Material"
+- assertVisible:
+    id: "material-title"
+- assertVisible:
+    id: "material-import-button"

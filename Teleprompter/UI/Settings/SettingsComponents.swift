@@ -75,6 +75,7 @@ struct SegmentedChoiceRow<Item: Hashable & Sendable>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(label)
+                .accessibilityIdentifier("choice-\(label)")
                 .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
             }
         }

@@ -79,6 +79,7 @@ struct ChatView: View {
             Text("Chat")
                 .font(Typography.h1)
                 .foregroundStyle(Colors.foreground)
+                .accessibilityIdentifier("chat-title")
 
             Spacer()
 
@@ -102,6 +103,7 @@ struct ChatView: View {
                 )
                 .buttonStyle(.plain)
                 .accessibilityLabel("Abrir conversas")
+                .accessibilityIdentifier("chat-conversas-button")
             }
 
             Button(
@@ -127,6 +129,7 @@ struct ChatView: View {
             )
             .buttonStyle(.plain)
             .accessibilityLabel("Abrir lente simulada")
+            .accessibilityIdentifier("chat-lens-button")
         }
     }
 
@@ -246,6 +249,7 @@ struct ChatView: View {
                 onSend: { sendCurrentText() },
                 onMicTapped: { viewModel.toggleListening() }
             )
+            .accessibilityIdentifier("chat-composer-field")
             .padding(.horizontal, Spacing.s4)
             .padding(.bottom, Spacing.s3)
         }

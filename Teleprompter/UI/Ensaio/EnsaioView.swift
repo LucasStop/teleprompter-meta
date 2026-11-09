@@ -48,6 +48,7 @@ struct EnsaioView: View {
             Text("Ensaio")
                 .font(Typography.h1)
                 .foregroundStyle(Colors.foreground)
+                .accessibilityIdentifier("ensaio-title")
             Spacer()
         }
     }
@@ -83,12 +84,14 @@ struct EnsaioView: View {
             Text("Sem perguntas gravadas")
                 .font(Typography.h2)
                 .foregroundStyle(Colors.foreground)
+                .accessibilityIdentifier("ensaio-empty-title")
 
             Text("Adicione áudios das perguntas da banca para ensaiar sem os óculos.")
                 .font(Typography.bodySm)
                 .foregroundStyle(Colors.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.s5)
+                .accessibilityIdentifier("ensaio-empty-instruction")
 
             Spacer()
         }
@@ -205,6 +208,7 @@ struct EnsaioView: View {
             PrimaryButton(title: "Adicionar áudios") {
                 viewModel.isShowingFileImporter = true
             }
+            .accessibilityIdentifier("ensaio-add-audios-button")
 
         case .rodando:
             Button {
