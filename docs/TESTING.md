@@ -59,7 +59,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 | US-08 | Resposta na lente real | roteiro manual com óculos | manual |
 | US-09 | Gesto repete ou pula | Glasses + manual | manual |
 | US-10 | 60 min sem falha | sessão de campo | manual, desempenho |
-| US-11 | Importação indexa o material | MaterialChunker, MaterialImporter, MaterialViewModel, MaterialIntegration | unitário, integração, aceitação |
+| US-11 | Importação indexa o material (arquivo único e pasta inteira) | MaterialChunker, MaterialImporter, FolderScanner, MaterialViewModel, MaterialFolderViewModel, MaterialIntegration | unitário, integração, aceitação |
 | US-12 | Entrada por texto e áudio recebem resposta pelo mesmo pipeline | ConversationViewModel, ConversationAudio, AppEnvironmentIntegrationTests | unitário, integração |
 | US-13 | Sem trecho acima do limiar responde "Não encontrei" sem chamar LLM | ConversationViewModel, AppEnvironmentIntegrationTests | unitário, aceitação, integração |
 | US-14 | Conversas salvas no aparelho, abrir e apagar por mais recente | ConversationStoreTests, ConversationsViewModelTests, AppEnvironmentIntegrationTests | unitário, integração, componente |

@@ -6,29 +6,42 @@ import Observation
 @MainActor
 @Observable
 final class MaterialViewModel {
-    private(set) var sources: [MaterialSource] = []
-    private(set) var lastUpdated: Date?
-    private(set) var loadingState: MaterialScreenState.LoadingState?
-    private(set) var errorMessage: (title: String, message: String)?
+    var sources: [MaterialSource] = []
+    var lastUpdated: Date?
+    var loadingState: MaterialScreenState.LoadingState?
+    var errorMessage: (title: String, message: String)?
 
     var isPickingFile: Bool = false
+    var isPickingFolder: Bool = false
     var isShowingClearConfirmation: Bool = false
 
-    private let indexable: any MaterialIndexable
-    private let importer: MaterialImporter
-    private let fileSource: any MaterialFileSource
+    var activeFolderState: MaterialScreenState.Kind?
+    var currentScanResult: FolderScanResult?
+    var folderProgressState: MaterialScreenState.FolderProgressState?
+    var folderResultBanner: MaterialScreenState.FolderResultBanner?
+    var folderErrorMessage: (title: String, message: String)?
+    var folderBadgeTitle: String?
 
-    private var lastAttempt: (@Sendable () async -> Void)?
+    var indexedFolderFilePaths: Set<String> = []
+
+    let indexable: any MaterialIndexable
+    let importer: MaterialImporter
+    let fileSource: any MaterialFileSource
+    let scanner: any FolderScanning
+
+    var lastAttempt: (@Sendable () async -> Void)?
 
     init(
         indexable: any MaterialIndexable,
         importer: MaterialImporter = MaterialImporter(),
         fileSource: any MaterialFileSource = DefaultMaterialFileSource(),
+        scanner: any FolderScanning = DefaultFolderScanner(),
         initialSources: [MaterialSource] = []
     ) {
         self.indexable = indexable
         self.importer = importer
         self.fileSource = fileSource
+        self.scanner = scanner
         self.sources = initialSources
         if !initialSources.isEmpty {
             self.lastUpdated = Date()
@@ -36,6 +49,10 @@ final class MaterialViewModel {
     }
 
     var screenState: MaterialScreenState {
+        if let folderState = makeFolderScreenState() {
+            return folderState
+        }
+
         if let loading = loadingState {
             return MaterialScreenState(
                 kind: .carregando,
@@ -75,6 +92,50 @@ final class MaterialViewModel {
         )
     }
 
+    private func makeFolderScreenState() -> MaterialScreenState? {
+        if activeFolderState == .pastaIndexando, let progress = folderProgressState {
+            return MaterialScreenState(
+                kind: .pastaIndexando,
+                badge: MaterialScreenState.BadgeState(status: .ativo, title: "Indexando pasta"),
+                sources: sources,
+                folderProgress: progress
+            )
+        }
+
+        if activeFolderState == .pastaConfirmar, let scan = currentScanResult {
+            let confirmation = MaterialScreenState.FolderConfirmationState(
+                folderName: scan.folderName,
+                validFilesCount: scan.validFiles.count,
+                qaCount: scan.qaCount,
+                documentCount: scan.documentCount,
+                codeCount: scan.codeCount,
+                ignoredGroups: scan.ignoredGroups
+            )
+            return MaterialScreenState(kind: .pastaConfirmar, sources: sources, folderConfirmation: confirmation)
+        }
+
+        if activeFolderState == .pastaConcluido {
+            return MaterialScreenState(
+                kind: .pastaConcluido,
+                badge: MaterialScreenState.BadgeState(status: .ok, title: folderBadgeTitle ?? "Pasta indexada"),
+                sources: sources,
+                folderResultBanner: folderResultBanner
+            )
+        }
+
+        if activeFolderState == .pastaErro, let error = folderErrorMessage {
+            let banner = MaterialScreenState.BannerState(
+                style: .danger,
+                title: error.title,
+                message: error.message,
+                actionTitle: "Escolher a pasta de novo"
+            )
+            return MaterialScreenState(kind: .pastaErro, banner: banner, sources: sources)
+        }
+
+        return nil
+    }
+
     private var formattedLastUpdated: String {
         guard let lastUpdated else {
             return "Índice atualizado agora"
@@ -89,133 +150,6 @@ final class MaterialViewModel {
         }
         let hours = Int(minutes / 60)
         return "Índice atualizado há \(hours) h"
-    }
-
-    // MARK: - Ações de Importação
-
-    func importFile(from url: URL) async {
-        lastAttempt = { [weak self] in
-            await self?.importFile(from: url)
-        }
-        errorMessage = nil
-
-        let fileName = url.lastPathComponent
-        loadingState = MaterialScreenState.LoadingState(
-            sourceName: fileName,
-            current: 0,
-            total: 1,
-            progress: 0.1
-        )
-
-        do {
-            let fileContent = try fileSource.read(from: url)
-            await processContent(name: fileContent.name, content: fileContent.text)
-        } catch let error as MaterialImporterError {
-            setImportError(for: fileName, error: error)
-        } catch {
-            errorMessage = (
-                title: "Não consegui ler \"\(fileName)\".",
-                message: error.localizedDescription
-            )
-            loadingState = nil
-        }
-    }
-
-    func importContent(name: String, content: String) async {
-        lastAttempt = { [weak self] in
-            await self?.importContent(name: name, content: content)
-        }
-        errorMessage = nil
-
-        loadingState = MaterialScreenState.LoadingState(
-            sourceName: name,
-            current: 0,
-            total: 1,
-            progress: 0.1
-        )
-
-        await processContent(name: name, content: content)
-    }
-
-    private func processContent(name: String, content: String) async {
-        do {
-            let chunks = try importer.parse(content: content, sourceName: name)
-            guard !chunks.isEmpty else {
-                throw MaterialImporterError.emptyFile(name)
-            }
-
-            loadingState = MaterialScreenState.LoadingState(
-                sourceName: name,
-                current: chunks.count / 2,
-                total: chunks.count,
-                progress: 0.5
-            )
-
-            // Substitui trechos antigos da mesma fonte (reimportação sem duplicação)
-            try indexable.removeSource(name)
-            try indexable.index(chunks)
-
-            loadingState = MaterialScreenState.LoadingState(
-                sourceName: name,
-                current: chunks.count,
-                total: chunks.count,
-                progress: 1.0
-            )
-
-            let kind = chunks.first?.kind ?? .document
-            let subtitle = makeSubtitle(kind: kind, count: chunks.count)
-            let newSource = MaterialSource(
-                name: name,
-                path: name,
-                kind: kind,
-                chunkCount: chunks.count,
-                subtitle: subtitle,
-                importedAt: Date()
-            )
-
-            if let existingIndex = sources.firstIndex(where: { $0.path == name }) {
-                sources[existingIndex] = newSource
-            } else {
-                sources.append(newSource)
-            }
-
-            lastUpdated = Date()
-            errorMessage = nil
-            loadingState = nil
-        } catch let error as MaterialImporterError {
-            setImportError(for: name, error: error)
-        } catch {
-            errorMessage = (
-                title: "Não consegui ler \"\(name)\".",
-                message: error.localizedDescription
-            )
-            loadingState = nil
-        }
-    }
-
-    private func setImportError(for name: String, error: MaterialImporterError) {
-        switch error {
-        case .emptyFile(let fileName):
-            errorMessage = (
-                title: "Não consegui indexar \"\(fileName)\".",
-                message: error.localizedDescription
-            )
-        case .unreadableFile(let fileName, _):
-            errorMessage = (
-                title: "Não consegui ler \"\(fileName)\".",
-                message: error.localizedDescription
-            )
-        }
-        loadingState = nil
-    }
-
-    private func makeSubtitle(kind: IndexedChunk.Kind, count: Int) -> String {
-        switch kind {
-        case .qa:
-            return "\(count) \(count == 1 ? "pergunta" : "perguntas")"
-        case .document, .code:
-            return "Importado hoje"
-        }
     }
 
     // MARK: - Remoção e Limpeza
@@ -242,10 +176,15 @@ final class MaterialViewModel {
             for source in sources {
                 try indexable.removeSource(source.path)
             }
+            for folderPath in indexedFolderFilePaths {
+                try indexable.removeSource(folderPath)
+            }
+            indexedFolderFilePaths.removeAll()
             sources.removeAll()
             lastUpdated = nil
             errorMessage = nil
             loadingState = nil
+            resetFolderState()
         } catch {
             errorMessage = (
                 title: "Erro ao limpar índice",
@@ -262,5 +201,42 @@ final class MaterialViewModel {
 
     func dismissError() {
         errorMessage = nil
+        folderErrorMessage = nil
+        if activeFolderState == .pastaErro {
+            activeFolderState = nil
+        }
+    }
+
+    // MARK: - Gestão de Estado de Pasta
+
+    func updateFolderState(
+        activeState: MaterialScreenState.Kind?,
+        scanResult: FolderScanResult? = nil,
+        progress: MaterialScreenState.FolderProgressState? = nil,
+        banner: MaterialScreenState.FolderResultBanner? = nil,
+        error: (title: String, message: String)? = nil,
+        badgeTitle: String? = nil
+    ) {
+        self.activeFolderState = activeState
+        if let scanResult { self.currentScanResult = scanResult }
+        self.folderProgressState = progress
+        self.folderResultBanner = banner
+        self.folderErrorMessage = error
+        if let badgeTitle { self.folderBadgeTitle = badgeTitle }
+    }
+
+    func resetFolderState() {
+        self.activeFolderState = nil
+        self.currentScanResult = nil
+        self.folderProgressState = nil
+        self.folderResultBanner = nil
+        self.folderErrorMessage = nil
+        self.folderBadgeTitle = nil
+    }
+
+    func replaceFolderSources(with newSources: [MaterialSource]) {
+        self.sources.removeAll { $0.path.hasPrefix("folder:") }
+        self.sources.append(contentsOf: newSources)
+        self.lastUpdated = Date()
     }
 }
