@@ -100,3 +100,73 @@ final class FakeSpeechAssetManager: SpeechAssetManager, @unchecked Sendable {
         }
     }
 }
+
+final class FakeMaterialIndex: MaterialIndexable, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _indexed: [IndexedChunk] = []
+    private var _removedPaths: [String] = []
+
+    var indexed: [IndexedChunk] {
+        lock.withLock { _indexed }
+    }
+
+    var removedPaths: [String] {
+        lock.withLock { _removedPaths }
+    }
+
+    func index(_ items: [IndexedChunk]) throws {
+        lock.withLock {
+            _indexed.append(contentsOf: items)
+        }
+    }
+
+    func removeSource(_ path: String) throws {
+        lock.withLock {
+            _removedPaths.append(path)
+            _indexed.removeAll { $0.source.path == path }
+        }
+    }
+}
+
+final class FakeFileSource: MaterialFileSource, @unchecked Sendable {
+    private let lock = NSLock()
+    var files: [URL: MaterialFileContent] = [:]
+    var simulatedError: Error?
+
+    func read(from url: URL) throws -> MaterialFileContent {
+        try lock.withLock {
+            if let simulatedError {
+                throw simulatedError
+            }
+            if let content = files[url] {
+                return content
+            }
+            throw MaterialImporterError.unreadableFile(url.lastPathComponent, reason: "Arquivo não encontrado.")
+        }
+    }
+}
+
+final class FakeFolderScanner: FolderScanning, @unchecked Sendable {
+    private let lock = NSLock()
+    var resultToReturn: FolderScanResult?
+    var simulatedError: Error?
+    var scannedURLs: [URL] = []
+
+    func scan(url: URL) throws -> FolderScanResult {
+        try lock.withLock {
+            scannedURLs.append(url)
+            if let simulatedError {
+                throw simulatedError
+            }
+            if let resultToReturn {
+                return resultToReturn
+            }
+            return FolderScanResult(
+                folderName: url.lastPathComponent,
+                folderURL: url,
+                validFiles: [],
+                ignoredFiles: []
+            )
+        }
+    }
+}

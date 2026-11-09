@@ -2,51 +2,6 @@ import Foundation
 import XCTest
 @testable import Teleprompter
 
-final class FakeMaterialIndex: MaterialIndexable, @unchecked Sendable {
-    private let lock = NSLock()
-    private var _indexed: [IndexedChunk] = []
-    private var _removedPaths: [String] = []
-
-    var indexed: [IndexedChunk] {
-        lock.withLock { _indexed }
-    }
-
-    var removedPaths: [String] {
-        lock.withLock { _removedPaths }
-    }
-
-    func index(_ items: [IndexedChunk]) throws {
-        lock.withLock {
-            _indexed.append(contentsOf: items)
-        }
-    }
-
-    func removeSource(_ path: String) throws {
-        lock.withLock {
-            _removedPaths.append(path)
-            _indexed.removeAll { $0.source.path == path }
-        }
-    }
-}
-
-final class FakeFileSource: MaterialFileSource, @unchecked Sendable {
-    private let lock = NSLock()
-    var files: [URL: MaterialFileContent] = [:]
-    var simulatedError: Error?
-
-    func read(from url: URL) throws -> MaterialFileContent {
-        try lock.withLock {
-            if let simulatedError {
-                throw simulatedError
-            }
-            if let content = files[url] {
-                return content
-            }
-            throw MaterialImporterError.unreadableFile(url.lastPathComponent, reason: "Arquivo não encontrado.")
-        }
-    }
-}
-
 @MainActor
 final class MaterialViewModelTests: XCTestCase {
     private struct TestContext {
@@ -201,7 +156,6 @@ final class MaterialViewModelTests: XCTestCase {
         await ctx.viewModel.importFile(from: fileURL)
         XCTAssertEqual(ctx.viewModel.screenState.kind, .erro)
 
-        // Corrige o erro e configura arquivo válido
         ctx.fakeFileSource.simulatedError = nil
         ctx.fakeFileSource.files[fileURL] = MaterialFileContent(name: "recuperavel.md", text: "Conteúdo corrigido.")
 

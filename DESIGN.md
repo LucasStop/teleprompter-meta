@@ -120,6 +120,7 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | `LensView` (lente 600x600) | bullets, palavras-chave, texto completo, status | 600x600 | ouvindo, pensando, resposta, erro, vazio | `Teleprompter/Lens/` (a criar) | visual + manual no óculos |
 | Botão de login do provedor | primary full-width | lg (56 pt) | padrão, pressionado, carregando, desabilitado | `Teleprompter/UI/Settings/` | componente + a11y |
 | Linha "conectado" (provedor) | padrão com ação | md | padrão, ação | `Teleprompter/UI/Settings/` | componente + a11y |
+| Fluxo de importação de pasta (T04) | confirmação, progresso, concluído | md | pastaConfirmar, pastaIndexando, pastaConcluido, pastaErro | `Teleprompter/UI/Material/` | componente + visual |
 
 Por componente, registrar em `design/components.md` a anatomia e a regra de uso; o que não tiver variante documentada não existe.
 

@@ -28,10 +28,19 @@ struct MaterialSource: Identifiable, Equatable, Sendable {
 
     /// Valor exibido no item da lista (ex: "30 itens" ou "12 trechos").
     var displayCount: String {
-        if kind == .qa {
-            return "\(chunkCount) \(chunkCount == 1 ? "item" : "itens")"
+        let countString: String
+        if chunkCount >= 1000 {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.locale = Locale(identifier: "pt_BR")
+            countString = formatter.string(from: NSNumber(value: chunkCount)) ?? "\(chunkCount)"
         } else {
-            return "\(chunkCount) \(chunkCount == 1 ? "trecho" : "trechos")"
+            countString = "\(chunkCount)"
+        }
+        if kind == .qa {
+            return "\(countString) \(chunkCount == 1 ? "item" : "itens")"
+        } else {
+            return "\(countString) \(chunkCount == 1 ? "trecho" : "trechos")"
         }
     }
 }

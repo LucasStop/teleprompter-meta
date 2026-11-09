@@ -7,6 +7,10 @@ struct MaterialScreenState: Equatable, Sendable {
         case padrao
         case carregando
         case erro
+        case pastaConfirmar
+        case pastaIndexando
+        case pastaConcluido
+        case pastaErro
     }
 
     struct BannerState: Equatable, Sendable {
@@ -40,23 +44,54 @@ struct MaterialScreenState: Equatable, Sendable {
         var progress: Double
     }
 
+    struct FolderConfirmationState: Equatable, Sendable {
+        var folderName: String
+        var validFilesCount: Int
+        var qaCount: Int
+        var documentCount: Int
+        var codeCount: Int
+        var ignoredGroups: [IgnoredGroup]
+    }
+
+    struct FolderProgressState: Equatable, Sendable {
+        var folderName: String
+        var current: Int
+        var total: Int
+        var currentFileName: String
+        var progress: Double
+    }
+
+    struct FolderResultBanner: Equatable, Sendable {
+        var ignoredCount: Int
+        var message: String
+    }
+
     var kind: Kind
     var badge: BadgeState?
     var banner: BannerState?
     var sources: [MaterialSource]
     var loading: LoadingState?
+    var folderConfirmation: FolderConfirmationState?
+    var folderProgress: FolderProgressState?
+    var folderResultBanner: FolderResultBanner?
 
     init(
         kind: Kind,
         badge: BadgeState? = nil,
         banner: BannerState? = nil,
         sources: [MaterialSource] = [],
-        loading: LoadingState? = nil
+        loading: LoadingState? = nil,
+        folderConfirmation: FolderConfirmationState? = nil,
+        folderProgress: FolderProgressState? = nil,
+        folderResultBanner: FolderResultBanner? = nil
     ) {
         self.kind = kind
         self.badge = badge
         self.banner = banner
         self.sources = sources
         self.loading = loading
+        self.folderConfirmation = folderConfirmation
+        self.folderProgress = folderProgress
+        self.folderResultBanner = folderResultBanner
     }
 }

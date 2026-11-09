@@ -142,9 +142,20 @@ struct MaterialImporter: Sendable {
     }
 
     func parse(content: String, sourceName: String) throws -> [IndexedChunk] {
+        try parse(content: content, sourceName: sourceName, kind: nil)
+    }
+
+    func parse(content: String, sourceName: String, kind: IndexedChunk.Kind? = nil) throws -> [IndexedChunk] {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw MaterialImporterError.emptyFile(sourceName)
+        }
+
+        if let kind {
+            if kind == .qa, let qaChunks = parseQA(content: trimmed, sourceName: sourceName), !qaChunks.isEmpty {
+                return qaChunks
+            }
+            return chunker.chunk(text: trimmed, source: sourceName, kind: kind)
         }
 
         // 1. Tenta formato Q&A
@@ -153,10 +164,10 @@ struct MaterialImporter: Sendable {
         }
 
         // 2. Determina tipo pelo sufixo do arquivo
-        let kind = determineKind(for: sourceName)
+        let detectedKind = determineKind(for: sourceName)
 
         // 3. Quebra em trechos via chunker
-        return chunker.chunk(text: trimmed, source: sourceName, kind: kind)
+        return chunker.chunk(text: trimmed, source: sourceName, kind: detectedKind)
     }
 
     private func determineKind(for sourceName: String) -> IndexedChunk.Kind {

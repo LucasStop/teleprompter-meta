@@ -28,40 +28,31 @@ struct MaterialView: View {
                 }
 
                 if let banner = viewModel.screenState.banner {
-                    Banner(
-                        style: banner.style,
-                        title: banner.title,
-                        message: banner.message,
-                        actionTitle: banner.actionTitle,
-                        action: {
-                            Task {
-                                await viewModel.retryLast()
-                            }
-                        },
-                        onDismiss: {
-                            viewModel.dismissError()
-                        }
-                    )
-                    .padding(.horizontal, Spacing.s4)
-                    .padding(.bottom, Spacing.s3)
-                    .transition(.opacity)
+                    bannerView(banner)
                 }
 
                 contentView
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .fileImporter(
+                        isPresented: $viewModel.isPickingFile,
+                        allowedContentTypes: supportedContentTypes,
+                        allowsMultipleSelection: false
+                    ) { result in
+                        handleFileImportResult(result)
+                    }
 
-                bottomActionsView
+                MaterialBottomActionsView(viewModel: viewModel)
                     .padding(.horizontal, Spacing.s4)
                     .padding(.vertical, Spacing.s3)
+                    .fileImporter(
+                        isPresented: $viewModel.isPickingFolder,
+                        allowedContentTypes: [.folder],
+                        allowsMultipleSelection: false
+                    ) { result in
+                        handleFolderImportResult(result)
+                    }
             }
             .background(Colors.background)
-            .fileImporter(
-                isPresented: $viewModel.isPickingFile,
-                allowedContentTypes: supportedContentTypes,
-                allowsMultipleSelection: false
-            ) { result in
-                handleFileImportResult(result)
-            }
             .confirmationDialog(
                 "Limpar todo o índice?",
                 isPresented: $viewModel.isShowingClearConfirmation,
@@ -91,6 +82,30 @@ struct MaterialView: View {
         }
     }
 
+    private func bannerView(_ banner: MaterialScreenState.BannerState) -> some View {
+        Banner(
+            style: banner.style,
+            title: banner.title,
+            message: banner.message,
+            actionTitle: banner.actionTitle,
+            action: {
+                if viewModel.screenState.kind == .pastaErro {
+                    viewModel.chooseAnotherFolder()
+                } else {
+                    Task {
+                        await viewModel.retryLast()
+                    }
+                }
+            },
+            onDismiss: {
+                viewModel.dismissError()
+            }
+        )
+        .padding(.horizontal, Spacing.s4)
+        .padding(.bottom, Spacing.s3)
+        .transition(.opacity)
+    }
+
     @ViewBuilder
     private var contentView: some View {
         switch viewModel.screenState.kind {
@@ -100,111 +115,44 @@ struct MaterialView: View {
             if let loading = viewModel.screenState.loading {
                 MaterialLoadingCardView(loading: loading)
             }
-        case .padrao, .erro:
+        case .padrao:
+            MaterialSourcesListView(sources: viewModel.sources) { source in
+                Task { await viewModel.removeSource(source) }
+            }
+        case .erro, .pastaErro:
             if viewModel.sources.isEmpty {
                 MaterialEmptyStateView()
             } else {
-                sourcesListView
-            }
-        }
-    }
-
-    private var sourcesListView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.s3) {
-                Text("Fontes")
-                    .font(Typography.h2)
-                    .foregroundStyle(Colors.foreground)
-                    .padding(.horizontal, Spacing.s4)
-
-                VStack(spacing: 0) {
-                    ForEach(Array(viewModel.sources.enumerated()), id: \.element.id) { index, source in
-                        if index > 0 {
-                            Divider()
-                                .background(Colors.border)
-                        }
-                        MaterialSourceRow(source: source) {
-                            Task {
-                                await viewModel.removeSource(source)
-                            }
-                        }
-                    }
+                MaterialSourcesListView(sources: viewModel.sources) { source in
+                    Task { await viewModel.removeSource(source) }
                 }
-                .background(Colors.surface)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.md)
-                        .stroke(Colors.border, lineWidth: Borders.standard)
-                )
-                .padding(.horizontal, Spacing.s4)
             }
-        }
-    }
-
-    @ViewBuilder
-    private var bottomActionsView: some View {
-        switch viewModel.screenState.kind {
-        case .vazio:
-            PrimaryButton(title: "Importar material") {
-                viewModel.isPickingFile = true
+        case .pastaConfirmar:
+            if let confirmation = viewModel.screenState.folderConfirmation {
+                FolderConfirmationContentView(confirmation: confirmation)
             }
-            .accessibilityIdentifier("material-import-button")
-        case .carregando:
-            PrimaryButton(title: "Indexando...", isLoading: true, isEnabled: false) {}
-        case .padrao:
-            VStack(spacing: Spacing.s2) {
-                PrimaryButton(title: "Importar material") {
-                    viewModel.isPickingFile = true
-                }
-                .accessibilityIdentifier("material-import-button")
-
-                Button(role: .destructive) {
-                    viewModel.isShowingClearConfirmation = true
-                } label: {
-                    Text("Limpar índice")
-                        .font(Typography.bodySm)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Colors.danger)
-                        .frame(maxWidth: .infinity, minHeight: Spacing.minTouchTarget)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Limpar índice")
+        case .pastaIndexando:
+            if let progress = viewModel.screenState.folderProgress {
+                FolderProgressContentView(progress: progress)
             }
-        case .erro:
-            VStack(spacing: Spacing.s2) {
-                PrimaryButton(title: "Tentar de novo") {
-                    Task {
-                        await viewModel.retryLast()
-                    }
+        case .pastaConcluido:
+            FolderConcluidoContentView(
+                sources: viewModel.sources,
+                banner: viewModel.screenState.folderResultBanner,
+                onRemoveSource: { source in
+                    Task { await viewModel.removeSource(source) }
                 }
-
-                Button {
-                    viewModel.isPickingFile = true
-                } label: {
-                    Text("Importar outro arquivo")
-                        .font(Typography.bodySm)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Colors.primary)
-                        .frame(maxWidth: .infinity, minHeight: Spacing.minTouchTarget)
-                }
-                .buttonStyle(.plain)
-            }
+            )
         }
     }
 
     private var supportedContentTypes: [UTType] {
         var types: [UTType] = [.text, .plainText, .utf8PlainText, .sourceCode]
-        if let mdType = UTType(filenameExtension: "md") {
-            types.append(mdType)
-        }
-        if let swiftType = UTType(filenameExtension: "swift") {
-            types.append(swiftType)
-        }
-        if let tsType = UTType(filenameExtension: "ts") {
-            types.append(tsType)
-        }
-        if let phpType = UTType(filenameExtension: "php") {
-            types.append(phpType)
+        let extensions = ["md", "swift", "ts", "tsx", "js", "php", "py", "json", "yml", "yaml"]
+        for ext in extensions {
+            if let utType = UTType(filenameExtension: ext) {
+                types.append(utType)
+            }
         }
         return types
     }
@@ -223,120 +171,19 @@ struct MaterialView: View {
             }
         }
     }
-}
 
-// MARK: - Subviews Auxiliares
-
-private struct MaterialEmptyStateView: View {
-    var body: some View {
-        VStack(spacing: Spacing.s3) {
-            Spacer()
-
-            Image(systemName: "doc.text")
-                .font(.system(size: 44))
-                .foregroundStyle(Colors.muted)
-                .accessibilityHidden(true)
-
-            Text("Nenhum material importado")
-                .font(Typography.h3)
-                .foregroundStyle(Colors.foreground)
-                .accessibilityIdentifier("material-empty-title")
-                .minimumScaleFactor(0.75)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Importe notas de Q&A, README, documentos ou o repositório. O chat só responde com isso.")
-                .font(Typography.bodySm)
-                .foregroundStyle(Colors.muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Spacing.s5)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer()
-        }
-    }
-}
-
-private struct MaterialLoadingCardView: View {
-    let loading: MaterialScreenState.LoadingState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
-            VStack(alignment: .leading, spacing: Spacing.s2) {
-                Text(loading.sourceName)
-                    .font(Typography.body)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Colors.foreground)
-
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Colors.border)
-                            .frame(height: 6)
-
-                        Capsule()
-                            .fill(Colors.primary)
-                            .frame(
-                                width: max(6, geo.size.width * CGFloat(max(0.05, min(1.0, loading.progress)))),
-                                height: 6
-                            )
-                    }
+    private func handleFolderImportResult(_ result: Result<[URL], any Error>) {
+        switch result {
+        case .success(let urls):
+            if let url = urls.first {
+                Task {
+                    await viewModel.selectFolder(url: url)
                 }
-                .frame(height: 6)
-                .accessibilityLabel("Progresso da indexação")
-                .accessibilityValue("\(Int(loading.progress * 100)) por cento")
-
-                Text("\(loading.current) de \(loading.total) trechos")
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
             }
-            .padding(Spacing.s4)
-            .background(Colors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
-                    .stroke(Colors.border, lineWidth: Borders.standard)
-            )
-            .padding(.horizontal, Spacing.s4)
-
-            Spacer()
+        case .failure:
+            Task {
+                await viewModel.selectFolder(url: URL(fileURLWithPath: "pasta_selecionada"))
+            }
         }
-        .padding(.top, Spacing.s2)
-    }
-}
-
-private struct MaterialSourceRow: View {
-    let source: MaterialSource
-    let onRemove: () -> Void
-
-    var body: some View {
-        HStack(alignment: .center, spacing: Spacing.s3) {
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(source.name)
-                    .font(Typography.body)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Colors.foreground)
-
-                Text(source.subtitle)
-                    .font(Typography.caption)
-                    .foregroundStyle(Colors.muted)
-            }
-
-            Spacer()
-
-            Text(source.displayCount)
-                .font(Typography.bodySm)
-                .foregroundStyle(Colors.muted)
-
-            Button(role: .destructive, action: onRemove) {
-                Image(systemName: "trash")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Colors.danger)
-                    .frame(width: Spacing.minTouchTarget, height: Spacing.minTouchTarget)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remover \(source.name)")
-        }
-        .padding(.horizontal, Spacing.s4)
-        .padding(.vertical, Spacing.s2)
     }
 }

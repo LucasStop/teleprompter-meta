@@ -154,4 +154,64 @@ final class MaterialIntegrationTests: XCTestCase {
         result = try await ctx.retriever.retrieve("ensaio preliminar")
         XCTAssertTrue(result.isEmpty, "Trecho removido não deve mais ser encontrado na busca")
     }
+
+    func testFolderImportIndexesMultipleFilesAndLocalRetrieverFindsChunks() async throws {
+        let ctx = try makeContext()
+        defer { ctx.cleanup() }
+
+        let folderURL = ctx.tempDirectory.appendingPathComponent("ProjetoMaterial", isDirectory: true)
+        let qaDir = folderURL.appendingPathComponent("qa", isDirectory: true)
+        let docsDir = folderURL.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: qaDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: docsDir, withIntermediateDirectories: true)
+
+        let file1URL = qaDir.appendingPathComponent("apresentacao.md")
+        let file2URL = docsDir.appendingPathComponent("arquitetura.md")
+        let file3URL = folderURL.appendingPathComponent("README.md")
+
+        let qaText = """
+        Pergunta: Qual é o formato da lente do Ray-Ban?
+        Resposta: A lente tem resolução de 600 por 600 pixels e suporta até 5 linhas de texto.
+        """
+        let docText = """
+        # Arquitetura do Teleprompter
+        O sistema utiliza busca em SQLite FTS5 com ranking BM25 e chunking inteligente de parágrafos.
+        """
+        let readmeText = """
+        # Teleprompter Meta
+        Aplicativo iOS pessoal para suporte ao apresentador durante a banca de mestrado.
+        """
+
+        try qaText.write(to: file1URL, atomically: true, encoding: .utf8)
+        try docText.write(to: file2URL, atomically: true, encoding: .utf8)
+        try readmeText.write(to: file3URL, atomically: true, encoding: .utf8)
+
+        let folderScanner = DefaultFolderScanner()
+        let realFileSource = DefaultMaterialFileSource()
+        let viewModel = MaterialViewModel(
+            indexable: ctx.retriever,
+            fileSource: realFileSource,
+            scanner: folderScanner
+        )
+
+        await viewModel.selectFolder(url: folderURL)
+        XCTAssertEqual(viewModel.screenState.kind, .pastaConfirmar)
+        XCTAssertEqual(viewModel.screenState.folderConfirmation?.validFilesCount, 3)
+
+        await viewModel.confirmFolderImport()
+        XCTAssertEqual(viewModel.screenState.kind, .pastaConcluido)
+
+        let qaResult = try await ctx.retriever.retrieve("formato da lente Ray-Ban")
+        XCTAssertNotNil(qaResult.qaNote)
+        XCTAssertTrue(qaResult.qaNote?.text.contains("600 por 600 pixels") ?? false)
+
+        let docResult = try await ctx.retriever.retrieve("ranking BM25 SQLite FTS5")
+        XCTAssertFalse(docResult.chunks.isEmpty)
+        XCTAssertEqual(docResult.chunks.first?.source.path, "docs/arquitetura.md")
+        XCTAssertTrue(docResult.chunks.first?.text.contains("ranking BM25") ?? false)
+
+        let readmeResult = try await ctx.retriever.retrieve("banca de mestrado apresentador")
+        XCTAssertFalse(readmeResult.chunks.isEmpty)
+        XCTAssertEqual(readmeResult.chunks.first?.source.path, "README.md")
+    }
 }
