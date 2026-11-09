@@ -8,6 +8,20 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 - Banco: sem servidor. SQLite com FTS5 e tabela de embeddings, gerado por `Tools/Indexer` (ADR-0006, proposta); configurações em arquivo local · Cache/fila: N/A · Arquivos: material importado e índice.
 - Ambientes: local e iPhone; teste com diretório temporário por execução. Sem produção separada.
 
+### Esquema SQLite do Índice Local (`LocalRetriever`)
+- Tabela `chunks`:
+  - `id INTEGER PRIMARY KEY AUTOINCREMENT`: chave primária interna do trecho.
+  - `kind TEXT NOT NULL`: tipo do trecho (`qa`, `document`, `code`).
+  - `source_path TEXT NOT NULL`: caminho da fonte de origem (`SourceRef.path`).
+  - `text TEXT NOT NULL`: texto do trecho ou resposta preparada da nota de Q&A.
+  - `search_text TEXT NOT NULL`: texto indexado para busca (pergunta esperada no Q&A; texto em documentos e código).
+  - `embedding BLOB`: vetor serializado `[Float]` para similaridade semântica opcional.
+  - Índice: `idx_chunks_source ON chunks(source_path)` para deleção rápida por fonte.
+- Tabela virtual FTS5 `chunks_fts`:
+  - `search_text`: texto indexado lexicalmente.
+  - Tokenizador: `unicode61 remove_diacritics 2` (ignora diacríticos/acentos e caixa em pt-BR).
+  - Associação: `rowid` alinhado ao `id` da tabela `chunks`.
+
 ## 2. Entidades
 
 | Entidade | Responsabilidade | Chave | Relações | Dado pessoal? |
