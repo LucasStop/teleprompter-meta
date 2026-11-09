@@ -117,3 +117,32 @@ TEST_RUNNER_RUN_LLM=1 RUN_LLM=1 xcodebuild test -scheme Teleprompter -destinatio
 - [ ] Bug corrigido tem teste de regressão
 - [ ] Tela nova ou alterada tem protótipo aprovado e teste (E2E/visual/a11y) conforme a tabela da seção 2
 - [ ] Este arquivo atualizado se a estratégia mudou
+
+## 8. Estado atual da suíte
+
+Medição executada localmente no simulador iPhone 17 (iOS 17.2+, Xcode 27.2 / macOS Apple Silicon):
+
+### 8.1. Contagem de testes
+- Total de testes executados: 186
+- Falhas: 0
+- Testes com skip documentado (`XCTSkip`): 3
+  - `WERHarnessTests.testWordErrorRateOnRecordedQuestions` (requer `RUN_STT=1` e gravações humanas)
+  - `RetrievalBenchmarkTests.testRetrievalAndPipelineBenchmark` (requer `RUN_BENCH=1`)
+  - `LLMBenchmarkTests.testBenchmarkCandidatesIfConfigured` (requer `RUN_LLM=1`)
+- Tempo de execução dos testes: 1.470 s
+
+### 8.2. Gates de CI (automatizados e bloqueantes)
+- SwiftLint (`swiftlint --strict`): 0 violações em 104 arquivos Swift.
+- Detecção de segredos (`gitleaks detect --source . --redact --no-banner --config .gitleaks.toml`): 0 vazamentos encontrados (40 commits escaneados).
+- Execução de testes (`xcodebuild test`): 186 testes executados com 100% de sucesso.
+- Gate de cobertura do núcleo (`./tools/coverage-gate.sh` com limiar mínimo de 80.0%):
+  - detector: 96.15% (25/26 linhas) [APROVADO]
+  - retrieval: 84.58% (576/681 linhas) [APROVADO]
+  - formatter: 97.10% (67/69 linhas) [APROVADO]
+
+### 8.3. O que continua manual
+- Medição empírica de WER no iPhone físico com o asset offline de língua portuguesa do SpeechAnalyzer baixado e as 30 perguntas gravadas com fala humana autêntica do Lucas (`humano/NN.wav`).
+- Hardware dos óculos (Meta Ray-Ban Display via Meta DAT SDK): pareamento, canal de microfone Bluetooth HFP a 8 kHz e renderização no display óptico (fase 3).
+- Gestos no Meta Neural Band para repetir ou descartar a resposta (fase 4).
+- Teste de resistência e estabilidade por 60 min de sessão contínua (fase 5).
+- Avaliação de latência TTFT (tempo até o primeiro token < 2 s) com chamada real de rede ao provedor de LLM definido no ADR-0005.
