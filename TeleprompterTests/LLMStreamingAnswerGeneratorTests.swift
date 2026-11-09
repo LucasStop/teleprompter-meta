@@ -307,3 +307,13 @@ final class LLMErrorTracker: @unchecked Sendable {
         _lastError = error
     }
 }
+
+final class DefaultSystemPromptTests: XCTestCase {
+    func testPromptAllowsPartialAnswersButKeepsClosedRAGRefusal() {
+        let prompt = StreamingAnswerGenerator.defaultSystemPrompt
+        XCTAssertTrue(prompt.contains("mesmo que parcialmente"))
+        XCTAssertTrue(prompt.contains("nunca use conhecimento externo"))
+        XCTAssertTrue(prompt.contains(AnswerPipeline.notFoundMessage))
+        XCTAssertEqual(FoundationModelsAnswerGenerator.defaultSystemPrompt, prompt)
+    }
+}
