@@ -44,5 +44,5 @@ xcodebuild test -scheme Teleprompter -destination "id=$UDID" \
   DEVELOPMENT_TEAM="$TEAM" -allowProvisioningUpdates > "$log" 2>&1 || true
 
 # Só as tabelas e avisos do teste; nada de ambiente.
-grep -E '^\||^###|\[AVISO\]|error:|Test Case .*(passed|failed|skipped)' "$log" || tail -20 "$log"
+grep -E '^\||^###|\[AVISO\]|\[ERRO\]|error:|Test Case .*(passed|failed|skipped)' "$log" || tail -20 "$log"
 echo "log completo: $log"
