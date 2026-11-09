@@ -14,7 +14,7 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 
 | Parte | Risco principal | Tipos aplicados | Ferramenta | Roda em | Fora de escopo e motivo |
 |---|---|---|---|---|---|
-| Audio e STT | Transcrição ruim a 8 kHz, perda de áudio | integração, desempenho | XCTest com as 30 perguntas gravadas (pt-BR) e fake de áudio; WER medido | local, PR | STT real nunca roda no PR; só no protótipo P1 |
+| Audio e STT | Transcrição ruim a 8 kHz, perda de áudio, falha de asset de fala | unitário, integração, desempenho | XCTest com fakes de SpeechAssetManager (instalação, progresso, erro de download) e 30 perguntas gravadas (pt-BR); WER medido | local, PR | STT real e download de asset nunca rodam no PR; só no iPhone físico |
 | Conversa (chat e RAG fechado) | Inventar resposta fora do material, perder fonte, misturar entradas | unitário, integração, aceitação | Swift Testing com fakes de Retriever e AnswerGenerator; caso "sem trecho acima do limiar" nunca chama o LLM | local, PR | Qualidade semântica manual nos protótipos |
 | QuestionDetector | Corta a pergunta cedo ou dispara duas vezes | estático, unitário, aceitação | Swift Testing / XCTest (transcrições parciais sintéticas) | local, PR | Mutação só aqui (núcleo crítico) |
 | Retrieval | Resposta errada ou nota não encontrada | unitário, integração, aceitação | XCTest com corpus fixo de Q&A, README e código de exemplo | PR | Qualidade semântica avaliada manualmente nos protótipos |
@@ -75,6 +75,9 @@ RUN_STT=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simula
 
 # Benchmark de recuperação (só roda com RUN_BENCH=1):
 TEST_RUNNER_RUN_BENCH=1 RUN_BENCH=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/RetrievalBenchmarkTests
+
+# Benchmark de provedores de LLM (só roda com RUN_LLM=1):
+TEST_RUNNER_RUN_LLM=1 RUN_LLM=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/LLMBenchmarkTests
 ```
 
 ### Gravação e execução do harness de WER
