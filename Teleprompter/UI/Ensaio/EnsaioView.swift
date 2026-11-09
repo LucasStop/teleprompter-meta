@@ -92,6 +92,7 @@ struct EnsaioView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.s5)
                 .accessibilityIdentifier("ensaio-empty-instruction")
+                .minimumScaleFactor(0.75)
 
             Spacer()
         }

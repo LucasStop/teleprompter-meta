@@ -36,11 +36,24 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.lucasstop.teleprompter.tests
+  TeleprompterUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [TeleprompterUITests]
+    dependencies:
+      - target: Teleprompter
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.lucasstop.teleprompter.uitests
+        TEST_TARGET_NAME: Teleprompter
 schemes:
   Teleprompter:
     build:
       targets:
         Teleprompter: all
         TeleprompterTests: [test]
+        TeleprompterUITests: [test]
     test:
-      targets: [TeleprompterTests]
+      targets:
+        - TeleprompterTests
+        - TeleprompterUITests

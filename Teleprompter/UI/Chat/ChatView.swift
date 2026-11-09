@@ -228,6 +228,8 @@ struct ChatView: View {
                     Text("Escuta contínua")
                         .font(Typography.bodySm)
                         .foregroundStyle(Colors.foreground)
+                        .minimumScaleFactor(0.75)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .toggleStyle(SwitchToggleStyle(tint: Colors.primary))
                 .accessibilityLabel("Escuta contínua")
@@ -239,6 +241,7 @@ struct ChatView: View {
                 Text("Só material importado")
                     .font(Typography.caption)
                     .foregroundStyle(Colors.muted)
+                    .minimumScaleFactor(0.75)
             }
             .padding(.horizontal, Spacing.s4)
 

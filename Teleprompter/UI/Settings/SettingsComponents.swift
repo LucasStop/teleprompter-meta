@@ -72,8 +72,11 @@ struct SegmentedChoiceRow<Item: Hashable & Sendable>: View {
                         .frame(maxWidth: .infinity, minHeight: Spacing.minTouchTarget)
                         .background(isSelected ? Colors.primary : Color.clear)
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, minHeight: Spacing.minTouchTarget)
+                .contentShape(Rectangle())
                 .accessibilityLabel(label)
                 .accessibilityIdentifier("choice-\(label)")
                 .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)

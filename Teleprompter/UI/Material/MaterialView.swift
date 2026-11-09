@@ -241,12 +241,15 @@ private struct MaterialEmptyStateView: View {
                 .font(Typography.h3)
                 .foregroundStyle(Colors.foreground)
                 .accessibilityIdentifier("material-empty-title")
+                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text("Importe notas de Q&A, README, documentos ou o repositório. O chat só responde com isso.")
                 .font(Typography.bodySm)
                 .foregroundStyle(Colors.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.s5)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
         }
