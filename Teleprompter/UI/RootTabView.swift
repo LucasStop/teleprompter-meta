@@ -46,7 +46,7 @@ public struct RootTabView: View {
             }
             .tag(AppTab.chat)
 
-            MaterialPlaceholderView()
+            MaterialView(viewModel: environment.materialViewModel)
                 .tabItem {
                     Label(AppTab.material.title, systemImage: AppTab.material.iconName)
                 }

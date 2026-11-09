@@ -22,7 +22,9 @@ targets:
   TeleprompterTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [TeleprompterTests]
+    sources:
+      - path: TeleprompterTests
+        excludes: ["Fixtures/**"]
     dependencies:
       - target: Teleprompter
     settings:
