@@ -1,0 +1,1 @@
+Qual a diferença entre include e extend em um diagrama de casos de uso?

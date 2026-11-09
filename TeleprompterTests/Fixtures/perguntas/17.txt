@@ -1,0 +1,1 @@
+Para que serve o diagrama de sequência na modelagem comportamental?

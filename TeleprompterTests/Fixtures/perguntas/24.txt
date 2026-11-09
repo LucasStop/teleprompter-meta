@@ -1,0 +1,1 @@
+Quais as decisões de hospedagem do projeto e por que a máquina virtual única foi substituída?
