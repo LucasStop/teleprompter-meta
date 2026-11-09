@@ -71,7 +71,7 @@ public struct RootTabView: View {
                 }
                 .tag(AppTab.material)
 
-            EnsaioPlaceholderView()
+            EnsaioView(viewModel: environment.ensaioViewModel)
                 .tabItem {
                     Label(AppTab.ensaio.title, systemImage: AppTab.ensaio.iconName)
                 }
