@@ -319,3 +319,17 @@ extension ChatScreenState {
         return latencyStr
     }
 }
+
+extension ChatScreenState {
+    /// Muda quando chega pergunta, resposta ou trecho de streaming; o chat rola ao fim a cada mudança.
+    var scrollSignature: Int {
+        var hasher = Hasher()
+        hasher.combine(messages.count)
+        if let last = messages.last {
+            hasher.combine(last.text)
+            hasher.combine(last.bullets)
+            hasher.combine(last.sources)
+        }
+        return hasher.finalize()
+    }
+}

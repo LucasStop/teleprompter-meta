@@ -113,7 +113,7 @@ Todo componente documenta: anatomia, variantes, tamanhos, estados e comportament
 | Navegação | abas inferiores (Sessão, Material, Ensaio, Ajustes) | md | ativo | idem | E2E |
 | Alerta / banner | info (borda neutra, ex.: arquivos ignorados na importação), warning, danger (só erro) | md | padrão, dispensável | idem | visual |
 | Selo de estado | ouvindo, transcrevendo, pensando, respondendo, erro, desconectado | sm | todos | idem | componente + visual |
-| Mensagem de chat | pergunta, resposta (com fontes), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
+| Mensagem de chat | pergunta, resposta (markdown inline renderizado; fontes uma por linha, sem corte), não encontrei | md | padrão, parcial (fala), carregando (streaming), erro | idem | componente + visual |
 | Compositor | texto, microfone, escuta contínua | md | vazio, digitando, ouvindo, desabilitado | idem | componente + a11y |
 | Transcrição ao vivo | parcial, final | md | vazio, ativo, erro | idem | componente |
 | Cartão de resposta | bullets, palavras-chave, texto completo | md | carregando (streaming), pronto, erro | idem | visual |

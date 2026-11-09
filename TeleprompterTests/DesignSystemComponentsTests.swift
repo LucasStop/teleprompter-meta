@@ -119,3 +119,14 @@ final class DesignSystemComponentsTests: XCTestCase {
         XCTAssertTrue(sendTapped)
     }
 }
+
+final class MessageBubbleMarkdownTests: XCTestCase {
+    func testMarkdownRendersBoldWithoutAsterisks() {
+        let rendered = MessageBubble.markdown("**Framework:** Next.js")
+        XCTAssertEqual(String(rendered.characters), "Framework: Next.js")
+    }
+
+    func testPlainTextPassesThroughUnchanged() {
+        XCTAssertEqual(String(MessageBubble.markdown("Sem formatação, 100%.").characters), "Sem formatação, 100%.")
+    }
+}

@@ -166,7 +166,8 @@ struct ChatView: View {
                     .padding(.vertical, Spacing.s2)
                 }
             }
-            .onChange(of: screenState.messages.count, { _, _ in
+            // Rola ao perguntar, ao chegar a resposta e a cada trecho do streaming.
+            .onChange(of: screenState.scrollSignature, { _, _ in
                 if let lastId = screenState.messages.last?.id {
                     withAnimation {
                         proxy.scrollTo(lastId, anchor: .bottom)
