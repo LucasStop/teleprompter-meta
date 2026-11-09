@@ -31,13 +31,19 @@ private final class SingleBufferProvider: @unchecked Sendable {
 
 final class SpeechAnalyzerTranscriber: SpeechTranscriber, @unchecked Sendable {
     let locale: Locale
+    private let assetManager: SpeechAssetManager
+    var onProgress: (@Sendable (Progress) -> Void)?
     var onError: (@Sendable (STTError) -> Void)?
 
     init(
         locale: Locale = Locale(identifier: "pt-BR"),
+        assetManager: SpeechAssetManager = SystemSpeechAssetManager(),
+        onProgress: (@Sendable (Progress) -> Void)? = nil,
         onError: (@Sendable (STTError) -> Void)? = nil
     ) {
         self.locale = locale
+        self.assetManager = assetManager
+        self.onProgress = onProgress
         self.onError = onError
     }
 
@@ -67,10 +73,47 @@ final class SpeechAnalyzerTranscriber: SpeechTranscriber, @unchecked Sendable {
     }
 
     @available(iOS 26, *)
+    private func ensureAssetAvailable() async throws {
+        guard await assetManager.isSupported(for: locale) else {
+            throw STTError.unsupportedLocale(locale)
+        }
+
+        let isInstalled = await assetManager.isInstalled(for: locale)
+        guard !isInstalled else { return }
+
+        do {
+            try await assetManager.install(for: locale) { [weak self] progress in
+                self?.onProgress?(progress)
+            }
+        } catch let error as STTError {
+            throw error
+        } catch {
+            throw STTError.assetDownloadFailed(error.localizedDescription)
+        }
+    }
+
+    @available(iOS 26, *)
     private func runTranscription(
         audio: AsyncStream<AudioBuffer>,
         continuation: AsyncStream<Transcript>.Continuation
     ) async {
+        do {
+            try await ensureAssetAvailable()
+        } catch let error as STTError {
+            onError?(error)
+            continuation.finish()
+            return
+        } catch {
+            onError?(.assetDownloadFailed(error.localizedDescription))
+            continuation.finish()
+            return
+        }
+
+        guard !Task.isCancelled else {
+            continuation.finish()
+            return
+        }
+
         do {
             let transcriber = Speech.SpeechTranscriber(locale: locale, preset: .progressiveTranscription)
             let analyzer = Speech.SpeechAnalyzer(modules: [transcriber])

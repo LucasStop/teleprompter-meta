@@ -17,7 +17,7 @@ Status: aprovada em 2026-11-08 (revisão de 2026-11-08 aprovada)
 | Interface iPhone | Chat (mensagens, texto, microfone), conversas, configurações, importação, ensaio, lente simulada | SwiftUI | `App/UI` | Domínio | Não |
 | Conversa | Orquestra entradas (texto, microfone, escuta contínua), mensagens e fontes | Swift puro (ViewModel) | `App/Domain` | Retrieval, STT | Não |
 | Audio | Captura do microfone (iPhone ou HFP dos óculos) | AVAudioEngine | `App/Audio` | - | Sim (voz) |
-| STT | Transcrição em streaming | SpeechAnalyzer ou alternativa (ADR-003) | `App/STT` | Audio | Sim |
+| STT | Transcrição em streaming e download on-demand de asset de fala (SpeechAssetManager) | SpeechAnalyzer ou alternativa (ADR-003) | `App/STT` | Audio | Sim |
 | QuestionDetector | Detecta fim da pergunta | Swift puro | `App/Domain` | STT | Não |
 | Retrieval | Busca em Q&A, documentos e código | SQLite FTS5 + embeddings (ADR-0006) | `App/Retrieval` | Persistência | Não |
 | LLM | Resposta com streaming a partir do contexto | Provedor externo (ADR-005) | `App/LLM` | Retrieval | Sim (pergunta enviada) |
