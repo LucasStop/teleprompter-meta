@@ -1,6 +1,6 @@
 # ADR 0010 — Projetos com índice isolado por arquivo SQLite
 
-- Status: proposta (issue #105)
+- Status: aceita em 2026-11-09 (Lucas)
 - Data: 2026-11-09
 
 ## Contexto
