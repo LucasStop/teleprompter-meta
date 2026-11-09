@@ -66,7 +66,16 @@ Preencher uma linha por parte listada em ARCHITECTURE.md. Tipos: estático, unit
 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17'    # unitário + componente + integração
 xcodebuild test -scheme TeleprompterUITests -destination 'platform=iOS Simulator,name=iPhone 17'     # E2E
 swiftlint --strict    # estático
+
+# Harness de WER (STT real sobre perguntas gravadas):
+RUN_STT=1 xcodebuild test -scheme Teleprompter -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TeleprompterTests/WERHarnessTests
 ```
+
+### Gravação e execução do harness de WER
+- Local dos arquivos: `TeleprompterTests/Fixtures/perguntas/`.
+- Formato: gravar em 8 kHz mono, nome `NN.wav` com a transcrição exata de referência em `NN.txt` (ex.: `01.wav` e `01.txt`).
+- As 30 perguntas da banca serão gravadas pelo Lucas.
+- O teste `WERHarnessTests` roda apenas localmente quando a variável `RUN_STT=1` estiver definida (no CI ele faz `XCTSkip` automaticamente). Se a pasta não contiver arquivos `.wav`, o teste emite `XCTSkip` com instruções de gravação. O aceite (PRD US-01) valida WER médio abaixo de 15%.
 
 ## 7. Pronto (Definition of Done) para PR
 - [ ] Testes novos ou alterados cobrem a mudança no nível certo
