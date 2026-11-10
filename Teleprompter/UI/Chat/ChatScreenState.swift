@@ -253,16 +253,17 @@ extension ChatScreenState {
         }
 
         for msg in viewModel.messages {
-            items.append(MessageItem(role: .question, text: msg.question))
+            items.append(MessageItem(id: "q-\(msg.id)", role: .question, text: msg.question))
             items.append(makeAnswerItem(for: msg, isGlassesConnected: viewModel.isGlassesConnected))
         }
 
         if kind == .pensando {
             if let pending = viewModel.pendingQuestion {
-                items.append(MessageItem(role: .question, text: pending))
+                items.append(MessageItem(id: "q-pending", role: .question, text: pending))
             }
             items.append(
                 MessageItem(
+                    id: "a-pending",
                     role: .answer,
                     text: "Buscando no material...",
                     caption: "Buscando resposta",
@@ -274,6 +275,7 @@ extension ChatScreenState {
         if kind == .escuta && !viewModel.currentTranscript.isEmpty {
             items.append(
                 MessageItem(
+                    id: "q-partial",
                     role: .partial,
                     text: viewModel.currentTranscript,
                     caption: "Pergunta parcial",
@@ -288,6 +290,7 @@ extension ChatScreenState {
     private static func makeAnswerItem(for msg: ChatMessage, isGlassesConnected: Bool) -> MessageItem {
         if msg.answer == AnswerPipeline.notFoundMessage {
             return MessageItem(
+                id: "a-\(msg.id)",
                 role: .answer,
                 text: AnswerPipeline.notFoundMessage,
                 bullets: ["Importe uma nota ou documento sobre o assunto, ou reformule a pergunta."],
@@ -305,6 +308,7 @@ extension ChatScreenState {
             }
         }
         return MessageItem(
+            id: "a-\(msg.id)",
             role: .answer,
             text: intro,
             bullets: bullets,
@@ -364,6 +368,11 @@ extension ChatScreenState {
 }
 
 extension ChatScreenState {
+    /// Id da última pergunta (ou pergunta parcial); muda quando o usuário pergunta de novo.
+    var lastQuestionId: String? {
+        messages.last(where: { $0.role != .answer })?.id
+    }
+
     /// Muda quando chega pergunta, resposta ou trecho de streaming; o chat rola ao fim a cada mudança.
     var scrollSignature: Int {
         var hasher = Hasher()

@@ -9,7 +9,7 @@ struct LensView: View {
             if let content {
                 Text(content.question)
                     .font(.system(size: 24)).foregroundStyle(LensTokens.muted)
-                Text(content.body)
+                Text(MessageBubble.markdown(content.body))
                     .font(.system(size: 32)).foregroundStyle(LensTokens.foreground)
                     .lineSpacing(10)
             } else {

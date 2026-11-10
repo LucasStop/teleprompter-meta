@@ -6,9 +6,6 @@ final class SmokeUITests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        let chatTitle = app.staticTexts["chat-title"]
-        XCTAssertTrue(chatTitle.waitForExistence(timeout: 5))
-
         let composerField = app.descendants(matching: .any)["chat-composer-field"]
         XCTAssertTrue(composerField.waitForExistence(timeout: 5))
 
@@ -45,7 +42,7 @@ final class SmokeUITests: XCTestCase {
 
             switch tab {
             case "Chat":
-                XCTAssertTrue(app.staticTexts["chat-title"].waitForExistence(timeout: 5))
+                XCTAssertTrue(app.descendants(matching: .any)["chat-composer-field"].waitForExistence(timeout: 5))
             case "Material":
                 XCTAssertTrue(app.staticTexts["material-title"].waitForExistence(timeout: 5))
             case "Ensaio":

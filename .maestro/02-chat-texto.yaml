@@ -3,7 +3,7 @@ appId: br.com.lucasstop.teleprompter
 - launchApp
 - tapOn: "Chat"
 - assertVisible:
-    id: "chat-title"
+    id: "chat-composer-field"
 - tapOn: "Campo de pergunta"
 - inputText: "O que e o app?"
 - tapOn: "Enviar pergunta"
@@ -14,4 +14,4 @@ appId: br.com.lucasstop.teleprompter
 - tapOn:
     id: "lens-modal-close-button"
 - assertVisible:
-    id: "chat-title"
+    id: "chat-composer-field"
