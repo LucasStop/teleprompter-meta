@@ -60,7 +60,7 @@ Para garantir seletores estáveis entre versões e temas sem depender unicamente
 
 | Identificador | Componente / Elemento | Tela |
 |---|---|---|
-| `chat-title` | Título da tela Chat | T02 |
+| `chat-composer-field` | Campo de pergunta do Chat | T02 |
 | `chat-conversas-button` | Botão no cabeçalho para abrir a lista de conversas | T02 |
 | `chat-lens-button` | Botão no cabeçalho para abrir a lente simulada | T02 |
 | `chat-composer-field` | Seção do campo de pergunta e envio de texto | T02 |

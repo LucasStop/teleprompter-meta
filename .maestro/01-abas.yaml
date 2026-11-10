@@ -2,7 +2,7 @@ appId: br.com.lucasstop.teleprompter
 ---
 - launchApp
 - assertVisible:
-    id: "chat-title"
+    id: "chat-composer-field"
 - tapOn: "Material"
 - assertVisible:
     id: "material-title"
@@ -13,4 +13,4 @@ appId: br.com.lucasstop.teleprompter
 - assertVisible: "Ajustes"
 - tapOn: "Chat"
 - assertVisible:
-    id: "chat-title"
+    id: "chat-composer-field"

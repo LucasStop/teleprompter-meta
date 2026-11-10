@@ -35,13 +35,9 @@ struct ChatView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            headerView
+            topBarView
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s4)
-                .padding(.bottom, Spacing.s2)
-
-            badgeView
-                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
                 .padding(.bottom, Spacing.s2)
 
             if let bannerState = screenState.banner {
@@ -80,77 +76,56 @@ struct ChatView: View {
 
     // MARK: - Subviews
 
-    private var headerView: some View {
+    /// Uma linha só (projeto, estado e atalhos) para sobrar altura ao chat.
+    private var topBarView: some View {
         HStack(spacing: Spacing.s2) {
-            Text("Chat")
-                .font(Typography.h1)
-                .foregroundStyle(Colors.foreground)
-                .accessibilityIdentifier("chat-title")
-
-            Spacer()
-
+            ProjectChip(projectName: activeProjectName, action: onOpenProjects)
+                .layoutPriority(1)
+            StatusBadge(status: screenState.badge.status, title: screenState.badge.title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
             if let onOpenConversations {
-                Button(
-                    action: onOpenConversations,
-                    label: {
-                        Text("Conversas")
-                            .font(Typography.bodySm)
-                            .fontWeight(.medium)
-                            .foregroundStyle(Colors.foreground)
-                            .padding(.horizontal, Spacing.s3)
-                            .frame(minHeight: Spacing.minTouchTarget)
-                            .background(Colors.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: CornerRadius.sm)
-                                    .stroke(Colors.border, lineWidth: Borders.standard)
-                            )
-                    }
+                topIconButton(
+                    systemName: "list.bullet",
+                    label: "Abrir conversas",
+                    identifier: "chat-conversas-button",
+                    action: onOpenConversations
                 )
-                .buttonStyle(.plain)
-                .accessibilityLabel("Abrir conversas")
-                .accessibilityIdentifier("chat-conversas-button")
             }
+            topIconButton(
+                systemName: "eyeglasses",
+                label: "Abrir lente simulada",
+                identifier: "chat-lens-button",
+                action: { isShowingLens = true }
+            )
+        }
+    }
 
-            Button(
-                action: { isShowingLens = true },
-                label: {
-                    HStack(spacing: Spacing.s1) {
-                        Image(systemName: "eyeglasses")
-                            .font(.system(size: 15, weight: .medium))
-                        Text("Lente")
-                            .font(Typography.bodySm)
-                            .fontWeight(.medium)
-                    }
+    private func topIconButton(
+        systemName: String,
+        label: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(
+            action: action,
+            label: {
+                Image(systemName: systemName)
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Colors.foreground)
-                    .padding(.horizontal, Spacing.s3)
-                    .frame(minHeight: Spacing.minTouchTarget)
+                    .frame(width: Spacing.minTouchTarget, height: Spacing.minTouchTarget)
                     .background(Colors.surface)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm))
                     .overlay(
                         RoundedRectangle(cornerRadius: CornerRadius.sm)
                             .stroke(Colors.border, lineWidth: Borders.standard)
                     )
-                }
-            )
-            .buttonStyle(.plain)
-            .accessibilityLabel("Abrir lente simulada")
-            .accessibilityIdentifier("chat-lens-button")
-        }
-    }
-
-    private var badgeView: some View {
-        HStack(spacing: Spacing.s2) {
-            ProjectChip(
-                projectName: activeProjectName,
-                action: onOpenProjects
-            )
-            StatusBadge(
-                status: screenState.badge.status,
-                title: screenState.badge.title
-            )
-            Spacer()
-        }
+            }
+        )
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(identifier)
     }
 
     private var chatAreaView: some View {
@@ -178,13 +153,16 @@ struct ChatView: View {
                         }
                         .padding(.horizontal, Spacing.s4)
                         .padding(.vertical, Spacing.s2)
+
+                        // Folga para a pergunta nova poder subir ao topo mesmo com resposta curta.
+                        Color.clear.frame(height: geometry.size.height * 0.7)
                     }
                 }
-                // Rola ao perguntar, ao chegar a resposta e a cada trecho do streaming.
-                .onChange(of: screenState.scrollSignature, { _, _ in
-                    if let lastId = screenState.messages.last?.id {
+                // Nova pergunta sobe ao topo; a resposta cresce abaixo sem puxar a rolagem.
+                .onChange(of: screenState.lastQuestionId, { _, newId in
+                    if let newId {
                         withAnimation {
-                            proxy.scrollTo(lastId, anchor: .bottom)
+                            proxy.scrollTo(newId, anchor: .top)
                         }
                     }
                 })
